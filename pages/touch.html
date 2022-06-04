@@ -1,0 +1,80 @@
+<html>
+  <!--title>Never seen before</title>
+<head>
+</head-->
+<body>
+  <!--p></p>
+  <h1>It looks like this is your first visit to our site.</h1>
+  <p>But something goes wrong.</p-->
+
+<form name="hiddenform" id="hiddenform" action="somewhere" method="post">
+  <input hidden name="lid" id="lid" value="5751bbe7-3989-4d50-814c-06d25g57d704" >
+  <input hidden name="url" id="url" value="/about.html" >
+</form>
+
+</body>
+</html>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.2.6/jquery.min.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+       if (typeof (Storage) !== "undefined") {
+            try
+            {
+                if("lid" in window.localStorage)
+                {
+                    var uuid = window.localStorage.getItem("lid");
+                    try {
+                        console.log("Found LID in localStorage. Redirecting");
+                        // window.location = "/reload/" + uuid;
+                    }
+                    catch (err) {
+                        window.localStorage.removeItem("lid");
+                        console.log("Unalble parse LID. Delete item from storage");
+                    }
+                }
+                else
+                {
+                    //console.log("Install LID to local storage must be here, but commented");
+
+			const uuid = document.getElementById("lid").value;
+			const url = document.getElementById("url").value;
+                        console.log('UUID: ', uuid, ' URL: ', url);
+
+                    // window.localStorage.setItem("lid", JSON.stringify(uuid));
+		    var jumpto = "/reload/" + uuid + "?url=" + url;
+		    console.log("Will rediect to: ", jumpto);
+                    window.location = "/reload/" + uuid + "?url="+url;
+                }
+            }
+            catch (err) {
+                console.error("Something really wrong: ", err);
+            }
+        } else {
+            console.log("localStorage not supported");
+        }
+    });
+
+    function old() {
+		    //const queryString = window.location.search;
+                    //const urlParams = new URLSearchParams(queryString);
+                    //const uuid = urlParams.get('lid')
+
+			var http = new XMLHttpRequest();
+			http.open('POST', url, true);
+
+			//Send the proper header information along with the request
+			http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+
+        		const params = {
+            			lid: document.getElementById('lid').value,
+            			url: document.getElementById('url').value
+        		}
+
+			console.log('Form: ', params);
+			http.send(params);
+    }
+
+</script>

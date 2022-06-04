@@ -1,0 +1,16 @@
+#!/bin/sh
+
+#echo "<!DOCTYPE html>"
+echo '<html><head>'
+echo '<meta charset="utf-8">'
+echo '<title>Simple example shell CGI</title>'
+echo '</head>'
+echo '<body>'
+env | while read line 
+do
+   echo " $line<br>"
+done
+
+echo '</body>'
+echo '</html>'
+

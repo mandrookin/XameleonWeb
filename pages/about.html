@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>About page</title>
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            outline: 0;
+            font-size: 100%;
+            vertical-align: baseline;
+            background: transparent;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+            background-color: rgb(240, 240, 240);
+            border-spacing: 0;
+            border-collapse: collapse;
+        }
+
+        h1 {
+            font-family: 'Ms Madi';
+            box-shadow: 10px 10px 5px #888888;
+            text-align: center;
+            font-size: 40px;
+            background: lightseagreen;
+            padding: 10px 0 10px 0;
+        }
+
+        p {
+            padding: 5px 25px 5px 25px;
+            width: 800px;
+            height: auto;
+            margin: auto;
+            border-width: 3px;
+            border-style: solid;
+            border-color: black;
+            background-color: rgb(176, 230, 248);
+            text-align: justify;
+            font-size: 20px;
+        }
+
+        .button3 {
+            width: 150px;
+            height: 30px;
+            background-color: #e7e7e7;
+            color: black;
+            border: 1px solid black;
+            border-radius: 4px;
+            box-shadow: 3px 3px 1px #888888;
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Inline CSS Example</h1>
+    <br>
+    <br>
+    <p>
+	Это страница о сайте. Да особо тут и нечего писать. Страничка используется для отладки сервера, с кодовым именем Pressure. Имя конечно поменяется,
+когда сервер будет более/менее готов для практического использования.
+    </p>
+    <br>
+   <form id="uploadbanner" enctype="multipart/form-data" method="post" action="#">
+     <input type="text" name="first" style="border: 2px solid gray; border-radius: 4px" width="120px" value="Bill">
+     <br><br>
+     <input type="text" name="last" style="border: 2px solid gray; border-radius: 4px" width="120px" value="Gates">
+     <br><br>
+     <input id="fileupload" name="myfile" type="file" />
+     <br><br>
+     <input id="fileupload" name="hisfile" type="file" />
+     <br><br>
+     <input id="fileupload" name="lastfile" type="file" />
+     <br><br>
+     <button type="submit" class="button3">Отправить</button>
+    </form>
+    <br>
+    <a href="/">Вернуться на главную страницу</a>
+</body>
+</html>
