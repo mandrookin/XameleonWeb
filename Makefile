@@ -22,7 +22,11 @@ $(OBJDIR):
 	echo "Create object directory"
 
 #
+
+dir_guard=@mkdir -p $(@D)
+
 $(OBJDIR)/%.o: %.cc $(DEP)
+	$(dir_guard)
 	@echo -e "Compiling \033[32m$@\033[0m"
 	@g++ $< $(CXXFLAGS) -o $@
 	

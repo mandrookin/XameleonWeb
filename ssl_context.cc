@@ -2,7 +2,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-#if 1
+#if 0
 #define CERTIFICATE_PUBLIC     "cert/debug.com.cer"
 #define CERTIFICATE_PRIVATE     "cert/debug.com.key"
 #else
