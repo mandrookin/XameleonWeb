@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 //#include <fcntl.h>
@@ -10,6 +11,8 @@
 
 #include "session.h"
 #include "action.h"
+
+#define SERVER_PORT     4433
 
 static volatile bool keepRunning = true;
 static volatile int server_sock;
@@ -89,6 +92,39 @@ void set_segfault_handler()
     signal(SIGINT, intHandler);
 }
 
+#include <ifaddrs.h>
+
+void show_registered_interfaces()
+{
+    printf("HTTP server listen for incoming connections on:\n");
+    struct ifaddrs * ifl;
+    if (0 == getifaddrs(&ifl) && ifl != nullptr) {
+        do {
+            int s;
+            char host[NI_MAXHOST];
+            if (ifl->ifa_addr->sa_family == AF_INET) {
+                s = getnameinfo(ifl->ifa_addr,
+                    sizeof(struct sockaddr_in),
+                    host, NI_MAXHOST,
+                    NULL, 0, NI_NUMERICHOST);
+                if (s != 0) {
+                    printf("getnameinfo() failed: %s\n", gai_strerror(s));
+                    exit(EXIT_FAILURE);
+                }
+                printf("\033[32m%s\033[0m: \033[33mhttps://%s:%u\033[0m\n", ifl->ifa_name, host, SERVER_PORT );
+            }
+            //else
+            //    printf("%s: Family value %d\n", ifl->ifa_name, ifl->ifa_addr->sa_family);
+
+            ifl = ifl->ifa_next;
+
+        } while (ifl);
+        freeifaddrs(ifl);
+    }
+    else
+        fprintf(stderr, "No interfaces detected\n");
+}
+
 int main(int argc, char **argv)
 {
     int client_sock;
@@ -98,7 +134,7 @@ int main(int argc, char **argv)
 
     SSL_CTX * context = create_context();
 
-    server_sock = create_socket(4433);
+    server_sock = create_socket(SERVER_PORT);
 
     add_action_route("/", GET, new static_page_action(tracked));
     add_action_route("/", POST, new post_form_action(tracked));
@@ -108,6 +144,8 @@ int main(int argc, char **argv)
     add_action_route("/dir/", GET, new static_page_action(guest));
     add_action_route("/cgi/", GET, new get_cgi_action(guest));
     add_action_route("/cgi/", POST, new get_cgi_action(guest));
+
+    show_registered_interfaces();
 
     while (keepRunning) {
         struct sockaddr_in addr;

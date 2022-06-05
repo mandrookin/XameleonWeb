@@ -5,6 +5,7 @@
 
 http_response_t * get_cgi_action::process_req(https_session_t * session, url_t * url)
 {
+    http_request_t      *   request = &session->request;
     http_response_t     *   response = &session->response_holder;
     int status;
     struct stat path_stat;
@@ -51,7 +52,7 @@ http_response_t * get_cgi_action::process_req(https_session_t * session, url_t *
             url->method == DEL ? "DEL" : "'Unparsed'"
             , false);
         setenv("SCRIPT_NAME", url->path, false);
-        setenv("CONTENT_LENGTH", "0", false);
+        setenv("CONTENT_LENGTH", std::to_string(request->_content_lenght).c_str(), false);
         setenv("PATH", path.c_str(), false);
 
 

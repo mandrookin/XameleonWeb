@@ -30,6 +30,7 @@
             font-size: 40px;
             background: lightseagreen;
             padding: 10px 0 10px 0;
+	    margin: 0px 25px 0px 25px;
         }
 
         p {
@@ -68,11 +69,15 @@
         </tr>
         <tr>
             <td style="width: 100px;">Скорость</td>
-            <td style="width: 300px; text-align: center;">120 км/ч</td>
+            <td style="width: 300px; text-align: center;"><span  id="speed">120 км/ч</span></td>
         </tr>
         <tr>
             <td style="width: 100px;">Время</td>
-            <td style="width: 300px; text-align: center;">100 сек</td>
+            <td style="width: 300px; text-align: center;"><span id="time">100 сек</span></td>
+        </tr>
+        <tr>
+	    <td style="width: 100px;">Расстояние</td>
+            <td style="width: 300px; text-align: center;"><span id="result"></span></td>
         </tr>
     </table>
     <br>
@@ -114,3 +119,21 @@
     </p>
 </body>
 </html>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        setInterval(timer, 1000);
+    });
+
+    
+    function timer() {
+	var td = document.getElementById('time');
+	var time = parseInt(td.innerHTML);
+	time++;
+	td.innerHTML = time + ' сек';
+	var speed = parseInt(document.getElementById('speed').innerHTML);
+	var data = document.getElementById("result");
+	let v = speed / 3600 * time;  //120 / 60 / 60 * 100;
+	data.innerHTML = v.toFixed(2) + ' км';
+    }
+</script>
