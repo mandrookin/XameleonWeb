@@ -25,11 +25,13 @@ class http_request_t {
     static const unsigned max_range_count = 3;
     void parse_cookies(char * cookie);
     void parse_range(char * ranges);
+    void parse_cache_control(char * cache_control);
     void prepare();
 public:
     std::map<std::string, std::string>  _cookies;
     std::string _referer;
     std::string _content_type;
+    std::string _cache_control;
     int _content_lenght;
     unsigned int ranges_count;
     range_t     ranges[max_range_count];
@@ -79,6 +81,9 @@ public:
     http_request_t      request;
     http_response_t     response_holder;
 
+
+private:
+    void log(url_t& url, char* request_body);
 
 public:
     http_response_t * page_not_found(http_method_t method, char * url);

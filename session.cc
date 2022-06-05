@@ -168,7 +168,7 @@ void http_request_t::parse_range(char* rangestr)
                     ranges_count++;
             }
             else {
-                printf("Range not found\n");
+                fprintf(stderr, "http_request_t::parse_range: Range not parsed\n");
             }
             if (*rangestr != ',')
                 break;
@@ -177,6 +177,12 @@ void http_request_t::parse_range(char* rangestr)
     }
     else
         fprintf(stderr, "Unknown range unit: %s\n", rangestr);
+}
+
+void http_request_t::parse_cache_control(char * cache_control)
+{
+    this->_cache_control = cache_control;
+    printf("Cache control: %s\n", cache_control);
 }
 
 void http_request_t::parse_cookies(char * cookie)
@@ -236,6 +242,7 @@ char * http_request_t::parse_http_header(char * header)
             printf("Referer: %s\n", delim);
             break;
         case hash("Cache-Control"):
+            parse_cache_control(delim);
             break;
         case hash("Cookie"):
             parse_cookies(delim);
@@ -289,6 +296,18 @@ char * http_request_t::parse_http_header(char * header)
     body = line;
     return line;
 }
+
+void https_session_t::log(url_t &url, char* request_body)
+{
+    printf("%s %s\n\033[33m%s\033[0m\n",
+        url.method == POST ? "POST" :
+        url.method == GET ? "GET" :
+        url.method == PUT ? "PUT" :
+        url.method == PATCH ? "PATCH" :
+        url.method == DEL ? "DEL" : "Error:",
+        url.path, request_body);
+}
+
 
 http_response_t * https_session_t::page_not_found(http_method_t method, char * url)
 {
@@ -403,10 +422,11 @@ void * https_session_t::https_session()
                 }
             }
             else {
-
+                printf("Rights: %d Cookie found: %d\n", action->get_rights(), cookie_found);
                 if (action->get_rights() == tracked && !cookie_found /*&& !session_found*/ ) {
                     response = &response_holder;
-                    url.rest = (char*)"touch.html";
+                    //url.rest = (char*)"touch.html";
+                    strcpy(url.path, "touch.html");
                     prepare_file(this, &url);
                     response->_code = 200;
                     response->_header_size = response->prepare_header(response->_header, response->_code, response->_body_size);
@@ -420,13 +440,7 @@ void * https_session_t::https_session()
 
 ///            printf("\tPATH:%s\n\tREST:%s\n", url.path, url.rest);
 
-            printf("%s %s\n\033[33m%s\033[0m\n", 
-                url.method == POST ? "POST" :
-                url.method == GET ? "GET" :
-                url.method == PUT ? "PUT" :
-                url.method == PATCH ? "PATCH" :
-                url.method == DEL ? "DEL" : "Error:",
-                url.path, request_body);
+            log(url, request_body);
 
             //printf("Response header size = %d\n", response->_header_size);
             SSL_write(ssl, response->_header, response->_header_size);
@@ -443,7 +457,7 @@ void * https_session_t::https_session()
         }
 
         if (rcv_sz < 0) {
-            printf("SSL connection error\n");
+            fprintf(stderr, "SSL connection error\n");
         }
     }
 
