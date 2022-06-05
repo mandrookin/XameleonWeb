@@ -40,8 +40,8 @@ $(OBJDIR)/%.o: %.cc $(DEP)
 	
 
 clean:
-	chmod -x $(SRC)
-	rm -rf *.o
+	@chmod -x $(SRC)
+	@find . -name "*.o" -type f -delete
 
 test:
 	@echo $(S_OBJ)
