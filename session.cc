@@ -108,6 +108,7 @@ int http_response_t::prepare_header(char * header, int code, int body_size)
         "Server: Pressure/1.0.0 (POSIX)\r\n"
         "Connection: keep-alive\r\n"
         "Content-Type: %s\r\n"
+        "Accept-Ranges: bytes\r\n"
         "Content-Length: %d\r\n",
         code, tbuf, content_type.c_str(), body_size);
     
@@ -128,6 +129,54 @@ void http_request_t::prepare()
 {
     _content_lenght = 0;
     _cookies.clear();
+    ranges_count = 0;
+}
+
+void http_request_t::parse_range(char* rangestr)
+{
+    ranges_count = 0;
+    if (strncmp(rangestr, "bytes=", 6) == 0) {
+        rangestr += 6;
+        char* start = nullptr;
+        char* delim = nullptr;
+//        range_t     range;
+        while(*rangestr) {
+            ranges[ranges_count].start = ranges[ranges_count].stop = 0;
+            while (*rangestr == ' ') rangestr++;
+            if (!*rangestr) break;
+            if (isdigit(*rangestr)) {
+                start = rangestr++;
+                delim = nullptr;
+                while (isdigit(*rangestr)) rangestr++;
+                if (*rangestr == '-') {
+                    delim = rangestr++;
+                    *delim++ = '\0';
+                    while (isdigit(*rangestr)) rangestr++;
+                }
+            }
+            else if (*rangestr == '-') {
+                delim = rangestr++;
+                *delim++ = '\0';
+                while (isdigit(*rangestr)) rangestr++;
+            }
+
+            if (start || delim) {
+                if (start) ranges[ranges_count].start = atoi(start);
+                if (delim) ranges[ranges_count].stop = atoi(delim);
+                printf("Detected Range: '%d' - '%d'\n", ranges[ranges_count].start, ranges[ranges_count].stop);
+                if(ranges_count < max_range_count)
+                    ranges_count++;
+            }
+            else {
+                printf("Range not found\n");
+            }
+            if (*rangestr != ',')
+                break;
+            rangestr++;
+        }
+    }
+    else
+        fprintf(stderr, "Unknown range unit: %s\n", rangestr);
 }
 
 void http_request_t::parse_cookies(char * cookie)
@@ -202,6 +251,9 @@ char * http_request_t::parse_http_header(char * header)
         case hash("If-None-Match"):
             break;
         case hash("Upgrade-Insecure-Requests"):
+            break;
+        case hash("Range"):
+            parse_range(delim);
             break;
         case hash("Sec-Fetch-Site"):
             break;

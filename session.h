@@ -15,14 +15,24 @@ typedef struct {
     unsigned int    lifetime;
 } cookie_t;
 
+typedef struct {
+    int     start;
+    int     stop;
+} range_t;
+
+
 class http_request_t {
+    static const unsigned max_range_count = 3;
     void parse_cookies(char * cookie);
+    void parse_range(char * ranges);
     void prepare();
 public:
     std::map<std::string, std::string>  _cookies;
     std::string _referer;
     std::string _content_type;
     int _content_lenght;
+    unsigned int ranges_count;
+    range_t     ranges[max_range_count];
 
     char * parse_http_header(char * header);
     char * body;
