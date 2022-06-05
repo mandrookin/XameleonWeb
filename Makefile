@@ -1,3 +1,5 @@
+﻿#
+
 PROJECT=serv
 DEP = http.h action.h session.h
 SRC := ssl_serv.cc session.cc guid.cc http_request.cc action_routes.cc ssl_context.cc \
@@ -13,6 +15,12 @@ S_OBJ := $(SRC:%.cc=$(OBJDIR)/%.o)
 CXXFLAGS=-c -Wall -Wformat-truncation=0
 
 all: $(PROJECT)
+ifneq ("$(wildcard cert/cert.pem)","")
+	@echo 'Certificate found'
+else
+	@echo 'Generate Certificate'
+	@cd cert; sh ./cert.sh; cd ..
+endif
 
 $(PROJECT): $(S_OBJ)
 	@echo Linking
