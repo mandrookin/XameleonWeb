@@ -17,6 +17,7 @@ typedef class https_transport : public transport_i
     bool session_found;
 
 protected:
+    int describe(char* socket_name, int buffs);
     int bind_and_listen(int port);
     transport_i * accept();
     int handshake();
@@ -44,6 +45,25 @@ https_transport::~https_transport()
     }
 }
 
+#include <netdb.h>
+
+int https_transport::describe(char* socket_name, int buffs)
+{
+    char name[64];
+    if (buffs > 0)
+        socket_name[0] = '\0';
+//   int s = getnameinfo((const sockaddr*)(&addr),
+    int s = getnameinfo(reinterpret_cast<sockaddr*>(&addr),
+        sizeof(struct sockaddr_in),
+        name, sizeof(name), // socket_name, buffs,
+        NULL, 0, NI_NUMERICHOST);
+    if (s != 0) {
+        printf("http_transport::describe - getnameinfo() failed: %s\n", gai_strerror(s));
+        return -1;
+    }
+    snprintf(socket_name, buffs, "HTTPS <- %s:%u", name, htons(addr.sin_port));
+    return s;
+}
 
 int https_transport::bind_and_listen(int port)
 {

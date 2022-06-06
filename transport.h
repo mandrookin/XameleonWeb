@@ -2,6 +2,7 @@
 
 typedef class transport_i {
 public:
+    virtual int describe(char * socket_name, int buffs) = 0;
     virtual int bind_and_listen(int port) = 0;
     virtual transport_i*  accept() = 0;
     virtual int handshake() = 0;

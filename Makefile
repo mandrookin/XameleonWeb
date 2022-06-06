@@ -3,7 +3,7 @@
 PROJECT=serv
 DEP = http.h action.h session.h
 SRC := ssl_serv.cc session.cc http_request.cc action_routes.cc ssl_context.cc \
-   lib/guid.cc lib/multipart_form.cc lib/https_transport.cc \
+   lib/guid.cc lib/multipart_form.cc lib/https_transport.cc lib/http_transport.cc \
    actions/static_pages.cc actions/directory.cc actions/classic_cgi.cc actions/post_form.cc
 
 OBJDIR := obj
@@ -43,6 +43,7 @@ $(OBJDIR)/%.o: %.cc $(DEP)
 clean:
 	@chmod -x $(SRC)
 	@find . -name "*.o" -type f -delete
+	@find . -name "*.cc" -o -name "*.h" -type f -exec chmod -x {} \;
 
 test:
 	@echo $(S_OBJ)

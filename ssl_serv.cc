@@ -13,22 +13,29 @@
 #include "session.h"
 #include "action.h"
 
+#define HTTP_ONLY   false
+
 #define SERVER_PORT     4433
 
 static volatile bool keepRunning = true;
 static transport_i* transport;
 
+#if HTTP_ONLY
+extern transport_t* create_http_transport();
+#else
 extern SSL_CTX* create_context();
 extern transport_t* create_https_transport(SSL_CTX* ctx);
-
+#endif
 void *thread_func(void *data)
 {
-    printf("Client thread started\n");
-    https_session_t * client = (https_session_t*)data;
+    char client_name[64];
+    https_session_t* client = (https_session_t*)data;
+    client->get_transport()->describe(client_name, sizeof(client_name));
+    printf("Client '%s' thread started\n", client_name);
     pthread_detach(pthread_self());
     client->https_session();
     delete client;
-    printf("Client thread exit\n");
+    printf("Client '%s' thread exit\n", client_name);
     pthread_exit(NULL);
 }
 
@@ -97,12 +104,15 @@ int main(int argc, char **argv)
 
     set_segfault_handler();
 
+#if HTTP_ONLY
+    transport = create_http_transport();
+#else
     SSL_CTX * context = create_context();
     transport = create_https_transport(context);
-
+#endif
     transport->bind_and_listen(SERVER_PORT);
 
-    add_action_route("/", GET, new static_page_action(tracked));
+    add_action_route("/", GET, new static_page_action(guest));
     add_action_route("/", POST, new post_form_action(tracked));
     add_action_route("/favicon.ico", GET, new get_favicon_action);
     add_action_route("/reload/", GET, new get_touch_action);
@@ -110,6 +120,7 @@ int main(int argc, char **argv)
     add_action_route("/dir/", GET, new static_page_action(guest));
     add_action_route("/cgi/", GET, new get_cgi_action(guest));
     add_action_route("/cgi/", POST, new get_cgi_action(guest));
+    add_action_route("/admin/admin_header.html", GET, new static_page_action(tracked));
 
     show_registered_interfaces();
 
@@ -135,6 +146,8 @@ int main(int argc, char **argv)
         transport->close();
         delete transport;
     }
+#if ! HTTP_ONLY
     SSL_CTX_free(context);
+#endif
     return 0;
 }
