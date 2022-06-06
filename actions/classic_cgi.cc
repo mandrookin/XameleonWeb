@@ -79,6 +79,7 @@ http_response_t * get_cgi_action::process_req(https_session_t * session, url_t *
             continue;
         }
 
+        response->content_type = "text/html; charset=utf-8";
         response->_header_size = response->prepare_header(response->_header, response->_code, response->_body_size);
 
     } while (false);
