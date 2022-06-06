@@ -1,4 +1,6 @@
-#include "../action.h"
+ï»¿#include "../action.h"
+
+// ä¸­å›½
 
 http_response_t * post_form_action::process_req(https_session_t * session, url_t * url)
 {
@@ -13,13 +15,13 @@ http_response_t * post_form_action::process_req(https_session_t * session, url_t
 #if true
 //    fprintf(fp, "%s !\n\n", request->_content_type.c_str());
     while (rest_size > 0) {
-        int rd_len = SSL_read(session->ssl, buf, BUFSIZE);
+        int rd_len = session->get_transport()->recv(buf, BUFSIZE);
         if (rd_len <= 0) {
             printf("Some problem on load POST form.\n");
             break;
         }
         printf("-----   Got data block %u\n", rd_len);
-        rest_size -= rd_len; // Ýòî äîëæíî áûòü âûøå öèêëà, ïîòîìó ÷òî rd_len èçìåíÿåòñÿ íèæå
+        rest_size -= rd_len; // Ð­Ñ‚Ð¾ Ð´Ð¾Ð»Ð¶Ð½Ð¾ Ð±Ñ‹Ñ‚ÑŒ Ð²Ñ‹ÑˆÐµ Ñ†Ð¸ÐºÐ»Ð°, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ rd_len Ð¸Ð·Ð¼ÐµÐ½ÑÐµÑ‚ÑÑ Ð½Ð¸Ð¶Ðµ
         fwrite(buf, rd_len, 1, fp);
     }
     fclose(fp);
@@ -36,7 +38,7 @@ http_response_t * post_form_action::process_req(https_session_t * session, url_t
             if (rd_len <= 0)
                 goto rcv_error;
 
-            rest_size -= rd_len; // Ýòî äîëæíî áûòü âûøå öèêëà, ïîòîìó ÷òî rd_len èçìåíÿåòñÿ íèæå
+            rest_size -= rd_len; // Ð­Ñ‚Ð¾ Ð´Ð¾Ð»Ð¶Ð½Ð¾ Ð±Ñ‹Ñ‚ÑŒ Ð²Ñ‹ÑˆÐµ Ñ†Ð¸ÐºÐ»Ð°, Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ rd_len Ð¸Ð·Ð¼ÐµÐ½ÑÐµÑ‚ÑÑ Ð½Ð¸Ð¶Ðµ
             char * src = buf;
 
             while (match_rest > 0 && rd_len > 0) {
@@ -49,7 +51,7 @@ http_response_t * post_form_action::process_req(https_session_t * session, url_t
                 src++;
                 rd_len--;
             }
-            if (rd_len == 0) // À ìîæåò áûòü match_rest != 0 ? Äà áåç ðàçíèöû!
+            if (rd_len == 0) // Ð Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ match_rest != 0 ? Ð”Ð° Ð±ÐµÐ· Ñ€Ð°Ð·Ð½Ð¸Ñ†Ñ‹!
                 continue;
 
             src += bound_len;
@@ -57,6 +59,8 @@ http_response_t * post_form_action::process_req(https_session_t * session, url_t
         }
     }
 #endif
+    response->_header_size = response->redirect_to(303, "/index.html");
+
     return response;
 
 //rcv_error:

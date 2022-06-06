@@ -1,10 +1,10 @@
 #pragma once
 
-#include <openssl/ssl.h>
 #include <map>
 #include <string>
 
 #include "http.h"
+#include "transport.h"
 
 constexpr unsigned int hash(const char * s, int off = 0) {
     return !s[off] ? 5381 : (hash(s, off + 1) * 33) ^ s[off];
@@ -70,12 +70,9 @@ public:
 };
 
 class https_session_t {
-    SSL_CTX	        *   ctx;
-    int			        server;
-    int			        client;
+    transport_i     *   transport;
 
 public:
-    SSL             *   ssl;
     bool                cookie_found;
     bool                session_found;
     http_request_t      request;
@@ -86,14 +83,10 @@ private:
     void log(url_t& url, char* request_body);
 
 public:
-    http_response_t * page_not_found(http_method_t method, char * url);
+    http_response_t * page_not_found(http_method_t method, char * url, const char * referer);
 
-    https_session_t(int client, int server, SSL_CTX * ctx)
-    {
-        this->client = client;
-        this->server = server;
-        this->ctx = ctx;
-    }
+    https_session_t(transport_i* transport) : transport(transport) {}
+    transport_i* get_transport() { return transport; }
 
     void * https_session();
 };

@@ -35,6 +35,7 @@ void prepare_file(
     https_session_t     *   session,
     url_t               *   url)
 {
+    http_request_t      *   request = &session->request;
     http_response_t     *   response = &session->response_holder;
     char  filename[512];
 
@@ -46,7 +47,7 @@ void prepare_file(
     response->_code = 200;
     response->_body = alloc_file(filename, &response->_body_size);
 
-#if false
+    #if false
     printf("Filename %s\n", filename);
     char * last = strchr(url->rest, '.');
 #else
@@ -86,7 +87,7 @@ void prepare_file(
     }
     if (response->_body == nullptr) {
         response->content_type = "text/html; charset=utf-8";
-        session->page_not_found(GET, url->path);
+        session->page_not_found(GET, url->path, request->_referer.c_str());
     }
 }
 

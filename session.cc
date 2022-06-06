@@ -139,7 +139,6 @@ void http_request_t::parse_range(char* rangestr)
         rangestr += 6;
         char* start = nullptr;
         char* delim = nullptr;
-//        range_t     range;
         while(*rangestr) {
             ranges[ranges_count].start = ranges[ranges_count].stop = 0;
             while (*rangestr == ' ') rangestr++;
@@ -299,6 +298,8 @@ char * http_request_t::parse_http_header(char * header)
 
 void https_session_t::log(url_t &url, char* request_body)
 {
+    ///            printf("\tPATH:%s\n\tREST:%s\n", url.path, url.rest);
+
     printf("%s %s\n\033[33m%s\033[0m\n",
         url.method == POST ? "POST" :
         url.method == GET ? "GET" :
@@ -309,7 +310,7 @@ void https_session_t::log(url_t &url, char* request_body)
 }
 
 
-http_response_t * https_session_t::page_not_found(http_method_t method, char * url)
+http_response_t * https_session_t::page_not_found(http_method_t method, char * url, const char* referer)
 {
     response_holder._code = 404;
     response_holder.content_type = "text/html; charset=utf-8";
@@ -317,13 +318,14 @@ http_response_t * https_session_t::page_not_found(http_method_t method, char * u
     response_holder._body_size = snprintf(response_holder._body, 4096,
         "<html><head><title>Page not found</title></head><body><p>"
         "Method %s<br>Page '%s' not found<br>"
-        "</p></body>",
+        "</p><p><a href='%s'</p></body>",
         method == POST ? "POST" :
         method == GET ? "GET" :
         method == PUT ? "PUT" :
         method == PATCH ? "PATCH" :
         method == DEL ? "DEL" : "-Unknown-",
-        url);
+        url, referer ? referer : ""
+        );
     response_holder._header_size = response_holder.prepare_header(response_holder._header, 404, response_holder._body_size);
 
     return &response_holder;
@@ -334,134 +336,97 @@ void prepare_file( https_session_t * session, url_t * url);
 void * https_session_t::https_session()
 {
     url_t           url;
+    int             rcv_sz;
+    char            rcv_buff[4096];
 
-    ssl = SSL_new(ctx);
-    SSL_set_fd(ssl, client);
+    transport->handshake();
 
-    //    SSL_set_msg_callback(ssl, SSL_callback);
+    while (1) 
+    {
+#if CONNECTION_TIMEOUT  // TODO
+        fd_set set;
+        struct timeval timeout;
 
-    if (SSL_accept(ssl) <= 0) {
-        ERR_print_errors_fp(stderr);
-    }
-    else {
-        int rcv_sz;
-        char rcv_buff[4096];
+        /* Initialize the file descriptor set. */
+        FD_ZERO(&set);
+        FD_SET(context->client, &set);
 
-        X509 * peer_cert = SSL_get_peer_certificate(ssl);
-        if (peer_cert == nullptr) {
-            printf("No peer certificate detected\n");
+        /* Initialize the timeout data structure. */
+        timeout.tv_sec = 10;
+        timeout.tv_usec = 0;
+
+        /* select returns 0 if timeout, 1 if input available, -1 if error. */
+        int ev = select(context->client + 1, &set, NULL, NULL, &timeout);
+        //  if(ev == 0) { printf("Socket timeout\n"); continue; }
+        //  if(ev < 0) { printf("Terminate waiting\n"); break; }
+        if (ev <= 0) { printf("Closing connection on timeout\n"); break; }
+#endif
+        rcv_sz = transport->recv(rcv_buff, 4096);
+        if (rcv_sz <= 0) break;
+        rcv_buff[rcv_sz] = 0;
+
+        printf("\033[34m%s\033[0m", rcv_buff);
+        fflush(stdout);
+
+        char * header_body = parse_http_request(rcv_buff, &url);
+
+        if (header_body == nullptr) {
+            fprintf(stderr, "Got broken HTTP request: %s size: %u\n%s\n", url.path, rcv_sz, rcv_buff);
+            break;
         }
 
-        SSL_SESSION * session = SSL_get_session(ssl);
-        printf("SSL_SESSION_is_reusable %d\n", SSL_SESSION_is_resumable(session));
+        char * request_body = request.parse_http_header(header_body + 2);
+        if (!request_body) {
+            fprintf(stderr, "HTTP header error\n");
+        }
+        cookie_found = request._cookies.count("lid") != 0;
 
-        unsigned int context_len;
-        const unsigned char * context_buff;
+        http_response_t * response = nullptr;
 
-//        SSL_SESSION_set1_id_context(session, (const unsigned char*) "WHAT IS THAT?", 14);
-
-        while (1) 
-        {
-#if CONNECTION_TIMEOUT  // TODO
-            fd_set set;
-            struct timeval timeout;
-
-            /* Initialize the file descriptor set. */
-            FD_ZERO(&set);
-            FD_SET(context->client, &set);
-
-            /* Initialize the timeout data structure. */
-            timeout.tv_sec = 10;
-            timeout.tv_usec = 0;
-
-            /* select returns 0 if timeout, 1 if input available, -1 if error. */
-            int ev = select(context->client + 1, &set, NULL, NULL, &timeout);
-            //  if(ev == 0) { printf("Socket timeout\n"); continue; }
-            //  if(ev < 0) { printf("Terminate waiting\n"); break; }
-            if (ev <= 0) { printf("Closing connection on timeout\n"); break; }
-#endif
-            context_buff = SSL_SESSION_get0_id_context(session, &context_len);
-            if (context_len != 0) {
-                if (strcmp( (const char*) context_buff, "Pressure") != 0) {
-                    printf("Session context: %s\n", context_buff);
-                    session_found = true;
-                }
-            }
-
-            rcv_sz = SSL_read(ssl, rcv_buff, 4096);
-            if (rcv_sz <= 0) break;
-            rcv_buff[rcv_sz] = 0;
-
-            printf("\033[34m%s\033[0m", rcv_buff);
-            fflush(stdout);
-
-            char * header_body = parse_http_request(rcv_buff, &url);
-
-            if (header_body == nullptr) {
-                fprintf(stderr, "Got broken HTTP request: %s size: %u\n%s\n", url.path, rcv_sz, rcv_buff);
+        http_action_t * action = find_http_action(url);
+        if (!action) {
+            response = page_not_found(url.method, url.path, request._referer.c_str());
+            if (request._content_lenght != 0) {
+                // Рвём соединение если нам пытаются залить какие-то данные, а их некуда лить. 
+                // Это лучше, чем попусту тянуть возможно мегабайты данных
+                transport->send(response->_header, response->_header_size);
+                transport->send(response->_body, response->_body_size);
                 break;
             }
-
-            char * request_body = request.parse_http_header(header_body + 2);
-            if (!request_body) {
-                fprintf(stderr, "HTTP header error\n");
-            }
-            cookie_found = request._cookies.count("lid") != 0;
-
-            http_response_t * response = nullptr;
-
-            http_action_t * action = find_http_action(url);
-            if (!action) {
-                response = page_not_found(url.method, url.path);
-                if (request._content_lenght != 0) {
-                    // Рвём соединение если нам пытаются залить какие-то данные, а их некуда лить. 
-                    // Это лучше, чем попусту тянуть возможно мегабайты данных
-                    SSL_write(ssl, response->_header, response->_header_size);
-                    SSL_write(ssl, response->_body, response->_body_size);
-                    break;
-                }
-            }
-            else {
-                printf("Rights: %d Cookie found: %d\n", action->get_rights(), cookie_found);
-                if (action->get_rights() == tracked && !cookie_found /*&& !session_found*/ ) {
-                    response = &response_holder;
-                    //url.rest = (char*)"touch.html";
-                    strcpy(url.path, "touch.html");
-                    prepare_file(this, &url);
-                    response->_code = 200;
-                    response->_header_size = response->prepare_header(response->_header, response->_code, response->_body_size);
-                    SSL_write(ssl, response->_header, response->_header_size);
-                    SSL_write(ssl, response->_body, response->_body_size);
-                    response->release();
-                    continue;
-                }
-                response = action->process_req(this, &url);
-            }
-
-///            printf("\tPATH:%s\n\tREST:%s\n", url.path, url.rest);
-
-            log(url, request_body);
-
-            //printf("Response header size = %d\n", response->_header_size);
-            SSL_write(ssl, response->_header, response->_header_size);
-            if (response->_body_size) {
-                //printf("Response body size = %d\n", response->_body_size);
-                SSL_write(ssl, response->_body, response->_body_size);
-            }
-
-            response->release();
         }
-        if (rcv_sz == 0) {
-            //close(client);
-            printf("Client closed connection\n\n");
+        else {
+            //printf("Rights: %d Cookie found: %d\n", action->get_rights(), cookie_found);
+            if (action->get_rights() == tracked && !cookie_found /*&& !session_found*/ ) {
+                response = &response_holder;
+                //url.rest = (char*)"touch.html";
+                strcpy(url.path, "touch.html");
+                prepare_file(this, &url);
+                response->_code = 200;
+                response->_header_size = response->prepare_header(response->_header, response->_code, response->_body_size);
+                transport->send(response->_header, response->_header_size);
+                transport->send(response->_body, response->_body_size);
+                response->release();
+                continue;
+            }
+            response = action->process_req(this, &url);
         }
 
-        if (rcv_sz < 0) {
-            fprintf(stderr, "SSL connection error\n");
+        log(url, request_body);
+
+        //printf("Response header size = %d\n", response->_header_size);
+        transport->send(response->_header, response->_header_size);
+        if (response->_body_size) {
+            //printf("Response body size = %d\n", response->_body_size);
+            transport->send(response->_body, response->_body_size);
         }
+        response->release();
     }
-
-    SSL_shutdown(ssl);
-    SSL_free(ssl);
+    if (rcv_sz == 0) {
+        printf("Client closed connection\n");
+    }
+    else if (rcv_sz < 0) {
+        fprintf(stderr, "SSL connection error\n");
+    }
+    transport->close();
     return nullptr;
 }

@@ -9,52 +9,17 @@
 //#include <fcntl.h>
 #include <signal.h>
 
+#include "transport.h"
 #include "session.h"
 #include "action.h"
 
 #define SERVER_PORT     4433
 
 static volatile bool keepRunning = true;
-static volatile int server_sock;
+static transport_i* transport;
 
-int create_socket(int port)
-{
-    int s;
-    int opt = 1;
-    struct sockaddr_in addr;
-
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-    s = socket(AF_INET, SOCK_STREAM, 0);
-    if (s < 0) {
-        perror("Unable to create socket");
-        exit(EXIT_FAILURE);
-    }
-
-    // Forcefully attaching socket to the port 8080
-    if (setsockopt(s, SOL_SOCKET,
-        SO_REUSEADDR | SO_REUSEPORT, &opt,
-        sizeof(opt))) {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
-    }
-
-    if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        perror("Unable to bind");
-        exit(EXIT_FAILURE);
-    }
-
-    if (listen(s, 1) < 0) {
-        perror("Unable to listen");
-        exit(EXIT_FAILURE);
-    }
-
-    return s;
-}
-
-extern SSL_CTX *create_context();
+extern SSL_CTX* create_context();
+extern transport_t* create_https_transport(SSL_CTX* ctx);
 
 void *thread_func(void *data)
 {
@@ -75,9 +40,10 @@ void segfault_sigaction(int signal, siginfo_t *si, void *arg)
 }
 
 void intHandler(int dummy) {
-    close(server_sock);
     keepRunning = false;
+    transport->close();
 }
+
 void set_segfault_handler()
 {
     struct sigaction sa;
@@ -127,14 +93,14 @@ void show_registered_interfaces()
 
 int main(int argc, char **argv)
 {
-    int client_sock;
     pthread_t handle;
 
     set_segfault_handler();
 
     SSL_CTX * context = create_context();
+    transport = create_https_transport(context);
 
-    server_sock = create_socket(SERVER_PORT);
+    transport->bind_and_listen(SERVER_PORT);
 
     add_action_route("/", GET, new static_page_action(tracked));
     add_action_route("/", POST, new post_form_action(tracked));
@@ -147,23 +113,28 @@ int main(int argc, char **argv)
 
     show_registered_interfaces();
 
-    while (keepRunning) {
-        struct sockaddr_in addr;
-        unsigned int len = sizeof(addr);
-        client_sock = accept(server_sock, (struct sockaddr*)&addr, &len);
-        if (client_sock < 0) {
+    transport_i* client_transport = nullptr;
+
+    while (keepRunning) 
+    {
+        client_transport = transport->accept();
+        if ( !client_transport) {
             if (keepRunning)
-                perror("Unable to accept incoming connnection");
+                perror("Unable accept incoming connnection");
             else
                 puts("\033[36m\nServer stopped by TERM signal\033[0m\n");
             continue;
         }
-        https_session_t	* client = new https_session_t(client_sock, server_sock, context);
+        https_session_t* client = new https_session_t(client_transport);
         if (pthread_create(&handle, NULL, thread_func, client)) {
             perror("Unable create client thread");
         }
     }
-    close(server_sock);
+
+    if (transport) {
+        transport->close();
+        delete transport;
+    }
     SSL_CTX_free(context);
     return 0;
 }

@@ -39,7 +39,7 @@ http_response_t * get_cgi_action::process_req(https_session_t * session, url_t *
         status = stat(buff, &path_stat);
         if (status || !S_ISREG(path_stat.st_mode) || (path_stat.st_mode & S_IXUSR) == 0) {
             printf("Executable %s not found\n", buff);
-            session->page_not_found(GET, url->path);
+            session->page_not_found(GET, url->path, request->_referer.c_str());
             continue;
         }
 
@@ -57,7 +57,7 @@ http_response_t * get_cgi_action::process_req(https_session_t * session, url_t *
 
 
         if ((fp = popen(buff, "r")) == NULL) {
-            session->page_not_found(GET, url->path);
+            session->page_not_found(GET, url->path, request->_referer.c_str());
             continue;
         }
 
@@ -75,7 +75,7 @@ http_response_t * get_cgi_action::process_req(https_session_t * session, url_t *
 
         if (pclose(fp)) {
             printf("Command not found or exited with error status\n");
-            session->page_not_found(GET, url->path);
+            session->page_not_found(GET, url->path, request->_referer.c_str());
             continue;
         }
 

@@ -6,12 +6,12 @@ echo '<meta charset="utf-8">'
 echo '<title>Simple example shell CGI</title>'
 echo '</meta></head>'
 echo '<body><h1>Список переменных окружениия, переданных сервером:</h1><br/>'
-env | while read line 
+env | while read line
 do
    echo " $line<br/>"
 done
-echo </br>
-echo <a href="/">Вернуться назад</a>
+echo '<br/>'
+echo '<a href="/">Вернуться назад</a>'
 echo '</body>'
 echo '</html>'
 

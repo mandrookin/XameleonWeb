@@ -1,6 +1,6 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS 1
 #define DEBUG_FORM
-#define DEBUG_MSVS
+//#define DEBUG_MSVS
 
 // 中国
 
@@ -145,7 +145,7 @@ int parse_form_data(FILE * fp, int rest_size, const char * bound)
                 src++;
             }
 
-            char * pname = src;
+//            char * pname = src;
             while (*src != '=') src++;
             *src++ = 0;
             if (*src++ != '"')
@@ -241,8 +241,11 @@ int test_main()
                 section->size,
                 section->filename.c_str());
             break;
+        default:
+            // Ничего не надо делать тут
+            break;
         }
     }
 
-    return 0;
+    return (r > 0) ? 0 : 1;
 }
