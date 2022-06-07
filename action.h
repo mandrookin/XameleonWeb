@@ -52,10 +52,10 @@ public:
     get_directory_action(access_t rights) : http_action_t(rights) {}
 };
 
-class get_cgi_action : public http_action_t {
+class cgi_action : public http_action_t {
     http_response_t * process_req(https_session_t * session, url_t * url);
 public:
-    get_cgi_action(access_t rights) : http_action_t(rights) {}
+    cgi_action(access_t rights) : http_action_t(rights) {}
 };
 
 class post_form_action : public http_action_t {

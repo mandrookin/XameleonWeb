@@ -13,8 +13,7 @@
 #include "session.h"
 #include "action.h"
 
-#define HTTP_ONLY   false
-
+#define HTTP_ONLY       false
 #define SERVER_PORT     4433
 
 static volatile bool keepRunning = true;
@@ -26,6 +25,7 @@ extern transport_t* create_http_transport();
 extern SSL_CTX* create_context();
 extern transport_t* create_https_transport(SSL_CTX* ctx);
 #endif
+
 void *thread_func(void *data)
 {
     char client_name[64];
@@ -118,8 +118,8 @@ int main(int argc, char **argv)
     add_action_route("/reload/", GET, new get_touch_action);
     add_action_route("/dir", GET, new get_directory_action(guest));
     add_action_route("/dir/", GET, new static_page_action(guest));
-    add_action_route("/cgi/", GET, new get_cgi_action(guest));
-    add_action_route("/cgi/", POST, new get_cgi_action(guest));
+    add_action_route("/cgi/", GET, new cgi_action(guest));
+    add_action_route("/cgi/", POST, new cgi_action(guest));
     add_action_route("/admin/admin_header.html", GET, new static_page_action(tracked));
 
     show_registered_interfaces();

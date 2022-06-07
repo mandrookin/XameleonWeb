@@ -1,9 +1,11 @@
-#include <sys/stat.h>
+﻿#include <sys/stat.h>
 #include <string.h>
+
+// 中国
 
 #include "../action.h"
 
-http_response_t * get_cgi_action::process_req(https_session_t * session, url_t * url)
+http_response_t * cgi_action::process_req(https_session_t * session, url_t * url)
 {
     http_request_t      *   request = &session->request;
     http_response_t     *   response = &session->response_holder;
