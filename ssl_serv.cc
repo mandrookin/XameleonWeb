@@ -116,8 +116,8 @@ int main(int argc, char **argv)
     add_action_route("/", POST, new post_form_action(tracked));
     add_action_route("/favicon.ico", GET, new get_favicon_action);
     add_action_route("/reload/", GET, new get_touch_action);
-    add_action_route("/dir", GET, new get_directory_action(guest));
-    add_action_route("/dir/", GET, new static_page_action(guest));
+    add_action_route("/upload", GET, new get_directory_action(guest));
+    add_action_route("/upload/", GET, new static_page_action(guest));
     add_action_route("/cgi/", GET, new cgi_action(guest));
     add_action_route("/cgi/", POST, new cgi_action(guest));
     add_action_route("/admin/admin_header.html", GET, new static_page_action(tracked));

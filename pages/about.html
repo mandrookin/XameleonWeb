@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>About page</title>
+    <title>Qiuck start</title>
     <style>
 
         * {
@@ -28,19 +28,18 @@
             font-size: 40px;
             background: lightseagreen;
             padding: 10px 0 10px 0;
+            margin: 0px 25px 0px 25px;
         }
 
         p {
+            font-family: Tahoma;
             padding: 5px 25px 5px 25px;
             width: 800px;
             height: auto;
             margin: auto;
-            border-width: 3px;
-            border-style: solid;
-            border-color: black;
-            background-color: rgb(176, 230, 248);
+            border-width: 0px;
             text-align: justify;
-            font-size: 20px;
+            font-size: 16px;
         }
 
         .button3 {
@@ -58,26 +57,26 @@
 </head>
 
 <body>
-    <h1>Inline CSS Example</h1>
+    <h1>Xameleon Web Server</h1>
     <br>
     <br>
     <p>
-	Это страница о сайте. Да особо тут и нечего писать. Страничка используется для отладки сервера, с кодовым именем Pressure. Имя конечно поменяется,
-когда сервер будет более/менее готов для практического использования.
+        Исходный код проекта <a href="https://github.com/mandrookin/XameleonWeb">Xameleon Web Server</a>.<br>
+        В настощий момент страница используется для теста загрузки файлов в разделе <a href="/upload">Отправленные файлы</a>.<br>
     </p>
     <br>
-   <form id="uploadbanner" enctype="multipart/form-data" method="post" action="#">
-     <input type="text" name="first" style="border: 2px solid gray; border-radius: 4px" width="120px" value="Bill">
-     <br><br>
-     <input type="text" name="last" style="border: 2px solid gray; border-radius: 4px" width="120px" value="Gates">
-     <br><br>
-     <input id="fileupload" name="myfile" type="file" />
-     <br><br>
-     <input id="fileupload" name="hisfile" type="file" />
-     <br><br>
-     <input id="fileupload" name="lastfile" type="file" />
-     <br><br>
-     <button type="submit" class="button3">Отправить</button>
+    <form id="uploadbanner" enctype="multipart/form-data" method="post" action="#">
+        <input type="text" name="first" style="border: 2px solid gray; border-radius: 4px" width="120px" value="Mark">
+        <br><br>
+        <input type="text" name="last" style="border: 2px solid gray; border-radius: 4px" width="120px" value="Twain">
+        <br><br>
+        <input id="fileupload" name="myfile" type="file" />
+        <br><br>
+        <input id="fileupload" name="hisfile" type="file" />
+        <br><br>
+        <input id="fileupload" name="lastfile" type="file" />
+        <br><br>
+        <button type="submit" class="button3">Отправить</button>
     </form>
     <br>
     <a href="/">Вернуться на главную страницу</a>

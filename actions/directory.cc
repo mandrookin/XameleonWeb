@@ -1,9 +1,9 @@
-#include <dirent.h>
+﻿#include <dirent.h>
 #include <sys/stat.h>
 #include <list>
 #include <string.h>
 
-
+// 中国
 
 #include "../action.h"
 

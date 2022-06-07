@@ -1,4 +1,7 @@
-﻿#include "../action.h"
+﻿#include <unistd.h>
+#include <fstream>
+
+#include "../action.h"
 #include "../multipart_form.h"
 
 // 中国
@@ -45,8 +48,29 @@ http_response_t * post_form_action::process_req(https_session_t * session, url_t
         }
         show(data);
 
+        char buff[512];
         for (auto const& section : data->_objects) {
-            holder += "<b>" + section->name + "</b>: " + section->value + "<br/>";
+            switch(section->type) {
+            case region::text:
+                holder += "<b>" + section->name + "</b>: " + section->value + "<br/>";
+                break;
+            case region::file:
+                snprintf(buff, sizeof(buff), "pages/upload/%s", section->value.c_str());
+#if false // Not works between mounts
+                if (link(section->filename.c_str(), buff) < 0)
+                    perror("Unable link file");
+#else
+                {
+                    std::ifstream ifs(section->filename, std::ios::in | std::ios::binary);
+                    std::ofstream ofs(buff, std::ios::out | std::ios::binary);
+                    ofs << ifs.rdbuf();
+                }
+#endif
+                holder += "Link file '" + section->filename + "' to '/upload/" + section->value + "'<br/>";
+                break;
+            default:
+                holder += "Unparsed section type<br/>";
+            }
         }
 
         delete data;

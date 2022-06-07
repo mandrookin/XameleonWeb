@@ -10,28 +10,6 @@
 #include "../transport.h"
 #include "../multipart_form.h"
 
-#if false
-typedef struct region {
-    typedef enum {
-        sync,
-        text,
-        file
-    } state_t;
-
-    state_t         type;
-    std::string     name;
-    std::string     value;
-    std::string     filename;
-    std::string     content_type;
-    FILE          * fp;
-    unsigned int    size;
-#ifdef DEBUG_MSVS
-    std::string     content;
-#endif
-    region() { type = sync; size = 0; fp = nullptr; }
-} section_t;
-#endif
-
 region::~region()
 {
     if (this->type == file && ! this->filename.empty()) {
