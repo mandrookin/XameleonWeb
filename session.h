@@ -29,6 +29,7 @@ class http_request_t {
     void prepare();
 public:
     std::map<std::string, std::string>  _cookies;
+    std::string _host;
     std::string _referer;
     std::string _content_type;
     std::string _cache_control;

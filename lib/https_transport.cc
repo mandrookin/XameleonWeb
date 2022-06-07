@@ -163,12 +163,16 @@ transport_i* https_transport::accept()
 
 int https_transport::recv(char* data, int size)
 {
-    return SSL_read(ssl, data, size);
+    int status = SSL_read(ssl, data, size);
+//    printf("recv %u byes:\n%s\n", status, data);
+    return status;
 }
 
 int https_transport::send(char* snd_buff, int len)
 {
-    return SSL_write(ssl, snd_buff, len);
+    int status = SSL_write(ssl, snd_buff, len);
+//    printf("sent %u byes:\n%s\n", status, snd_buff);
+    return status;
 }
 
 transport_t* create_https_transport(SSL_CTX* ctx)

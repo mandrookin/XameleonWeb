@@ -233,6 +233,7 @@ char * http_request_t::parse_http_header(char * header)
         switch (hash(line))
         {
         case hash("Host"):
+            _host = delim;
             break;
         case hash("Connection"):
             break;

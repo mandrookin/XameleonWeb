@@ -4,10 +4,8 @@
 
 // 中国
 
-//#include <stdio.h>
-//#include <string>
-//#include <list>
 #include <cstring>
+#include <unistd.h>
 
 #include "../transport.h"
 #include "../multipart_form.h"
@@ -36,10 +34,27 @@ typedef struct region {
 
 region::~region()
 {
+    if (this->type == file && ! this->filename.empty()) {
+        unlink(this->filename.c_str());
+        fprintf(stdout, "File '%s' has been deleted from the server's filesystem\n", this->filename.c_str());
+    }
     fprintf(stdout, "Delete section %s\n", name.c_str());
 }
 
-//form_data_t   received_objects;
+form_data_t::form(const char * name)
+{
+    _name = name;
+    fprintf(stdout, "Create form %s\n", _name.c_str());
+}
+
+form_data_t::~form()
+{
+    fprintf(stdout, "Destroy form '%s'\n", _name.c_str());
+    for (auto object : this->_objects) {
+        delete object;
+    }
+    this->_objects.clear();
+}
 
 // Алгоритм не отработает, если размер буфера меньше 256 байт.
 static const int BUFSIZE = 16 * 1024; // 256; // 512; // 
@@ -51,7 +66,6 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
     char            namebuf[L_tmpnam];
     char            iobuf[CACHE_SIZE];
     char            buf[BUFSIZE];
-    char            safe_pad = 0;
 
     //    printf("FILE Buffer size = %u, name fuffer size %u\n", BUFSIZ, L_tmpnam);
 //    FILE* tmp = fopen("sform.bin", "wb");
@@ -81,25 +95,27 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
         do {
             int save_len = rd_len;
             int i = 0;
-//printf("Enter comparer\n");
             while (match_rest > 0 && rd_len > 0) {
                 int idx = bound_len - match_rest;
                 if (src[i++] == pbound[idx]) {
                     match_rest--;
                     rd_len--;
-//putchar(pbound[idx]);
                     continue;
                 }
-//printf("Leave comparer\n");
 
                 if (rd_len == 0)
                     break;
-//    putchar(*src);
 
                 if (match_rest == 2 && src[idx] == '-' && src[idx + 1] == '-') {
-                    printf("Finished\n");
-                    if(section->size != 0)
-                        form_data->push_back(section);
+//                    printf("Finished. Type is %d\n", section->type);
+                    if (section->size != 0) {
+                        if (section->fp != nullptr) {
+                            fclose(section->fp);
+                            section->fp = nullptr;
+                        }
+                        form_data->_objects.push_back(section);
+                        section = nullptr;
+                    }
                     rd_len -= 4;
                     break;
                 }
@@ -127,12 +143,15 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
 
 //            printf("Secton type = %d Value='%s'\n", section->type, section->value.c_str());
 
-            if (rd_len == 0) // А может быть match_rest != 0 ? Да без разницы!
+            if (rd_len == 0) // А может быть match_rest != 0 ? Да без разницы! 
+            {
+//                printf("RD_LEN is zero. Rest size = %d\n\n", rest_size);
                 break;
+            }
 
             src += i;
-            if (rd_len < 256) {
-                //                printf("Weakpoint detected\n");
+            if (rd_len < 256 && rest_size > 0) {
+//                printf("Weakpoint detected: rd_len %d rest_size %d\n", rd_len, rest_size);
                                 // Пробую самый лёгкий алгоритм, поскольку лепить сложную стейт-машину нет ни сил, ни желания, ни времени
                 std::memcpy(buf, src, rd_len);
 //                int chunk_len = fread(buf + rd_len, 1, BUFSIZE - static_cast<size_t>(rd_len), fp);
@@ -142,14 +161,15 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
                 rest_size -= chunk_len;
             }
 
-  //          printf("Section type %u '%s'\n", section->type, section->name.c_str());
+//          printf("Section type %u '%s'\n", section->type, section->name.c_str());
+
             if (section->type == region::sync) {
                 pbound = bound;
                 bound_len += 2;
             }
             else {
                 if (section->size != 0) {
-                    form_data->push_back(section);
+                    form_data->_objects.push_back(section);
 #ifndef DEBUG_MSVS
                     if (section->fp != nullptr) {
                         fclose(section->fp);
@@ -174,7 +194,7 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
                 src++;
             }
 
-            char * pname = src;
+//            char * pname = src;
             while (*src != '=') src++;
             *src++ = 0;
             if (*src++ != '"')
@@ -184,8 +204,8 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
                 section->name += *src++;
 
 //            printf("pname found %s\n", pname);
+//            char * fname = nullptr;
 
-            char * fname = nullptr;
             src++;
 
             if (*src == ';') {
@@ -193,7 +213,7 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
                 *src = '\0';
                 src++;
                 while (*src == ' ') src++;
-                fname = src;
+//                fname = src;
                 while (*src != '=') src++;
                 *src++ = 0;
                 if (*src++ != '"')
@@ -217,9 +237,9 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
                 }
                 while (*src != '\r')
                     section->content_type += *src++;
-//                fprintf(stdout, "Create file '%s' Filename: %s\n", section->filename.c_str(), section->filename.c_str());
 #ifndef DEBUG_MSVS
                 if (!section->value.empty()) {
+//                    fprintf(stdout, "Create file '%s' Filename: %s\n", section->filename.c_str(), section->filename.c_str());
                     section->fp = fopen(section->filename.c_str(), "wb");
                     setvbuf(section->fp, iobuf, _IOFBF, CACHE_SIZE);
                 }
@@ -231,6 +251,7 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
                     goto formerror;
                 section->type = region::text;
             }
+//            printf("Looking terminator\n");
             p = term;
             while (*p) {
                 if (*p != *src)
@@ -238,6 +259,7 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
                 p++;
                 src++;
             }
+//            printf("Before data\n");
             rd_len -= (src - hdr_ptr);
             if (rd_len < 0) {
                 goto formerror;
@@ -246,7 +268,8 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
         } while (rd_len > 0);
     }
 //    fclose(tmp);
-    delete section;
+    if(section != nullptr)
+        delete section;
     return 0;
 formerror:
 //    fclose(tmp);
@@ -274,8 +297,8 @@ int test_main()
 
 void show(form_data_t * form_data)
 {
-    printf("Show form data [%u]:\n", form_data->size());
-    for (auto const& section : *form_data) {
+    printf("Show form data [%lu]:\n", form_data->_objects.size());
+    for (auto const& section : form_data->_objects) {
         switch (section->type)
         {
         case region::text:
@@ -292,7 +315,7 @@ void show(form_data_t * form_data)
                 section->filename.c_str());
             break;
         default:
-            printf("Not-Parsed: '%s'\n", section->name.c_str());
+            printf("Not-Parsed type: %d name: '%s'\n", section->type, section->name.c_str());
             break;
         }
     }

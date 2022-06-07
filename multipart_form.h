@@ -26,7 +26,12 @@ typedef struct region {
     ~region();
 } section_t;
 
-typedef std::list<section_t*>   form_data_t;
+typedef struct form {
+    std::string _name;
+    std::list<section_t*>   _objects;
+    form(const char * name);
+    ~form();
+} form_data_t;
 
 int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data_t * form_data);
 void show(form_data_t* form_data);
