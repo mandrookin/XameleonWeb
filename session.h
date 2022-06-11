@@ -20,12 +20,19 @@ typedef struct {
     int     stop;
 } range_t;
 
+typedef enum {
+    plain       = 0,
+    gzip        = 1,
+    deflate     = 2,
+    br          = 4
+} encoding_t;
 
 class http_request_t {
     static const unsigned max_range_count = 3;
     void parse_cookies(char * cookie);
     void parse_range(char * ranges);
     void parse_cache_control(char * cache_control);
+    void parse_encoding(char* enc);
     void prepare();
 public:
     std::map<std::string, std::string>  _cookies;
@@ -34,6 +41,7 @@ public:
     std::string _content_type;
     std::string _cache_control;
     int _content_lenght;
+    encoding_t  encoding;
     unsigned int ranges_count;
     range_t     ranges[max_range_count];
 

@@ -15,6 +15,7 @@ typedef class http_transport : public transport_i
     bool session_found;
 
 protected:
+    const sockaddr* const address();
     int describe(char* socket_name, int buffs);
     int bind_and_listen(int port);
     transport_i * accept();
@@ -38,6 +39,12 @@ http_transport::~http_transport()
 {
     printf("\033[36mHTTP transport destructor\033[0m\n");
 }
+
+const sockaddr* const http_transport::address()
+{
+    return reinterpret_cast<sockaddr*>(&addr);
+}
+
 
 #include <netdb.h>
 

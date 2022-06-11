@@ -11,13 +11,15 @@
 
 #include "transport.h"
 #include "session.h"
+#include "session_mgr.h"
 #include "action.h"
 
 #define HTTP_ONLY       false
 #define SERVER_PORT     4433
 
-static volatile bool keepRunning = true;
-static transport_i* transport;
+static volatile bool        keepRunning = true;
+static transport_i      *   transport;
+static session_mgr_t        session_cache;
 
 #if HTTP_ONLY
 extern transport_t* create_http_transport();
@@ -32,8 +34,10 @@ void *thread_func(void *data)
     https_session_t* client = (https_session_t*)data;
     client->get_transport()->describe(client_name, sizeof(client_name));
     printf("Client '%s' thread started\n", client_name);
+    session_cache.add_session(client);
     pthread_detach(pthread_self());
     client->https_session();
+    session_cache.remove_session(client);
     delete client;
     printf("Client '%s' thread exit\n", client_name);
     pthread_exit(NULL);
@@ -100,9 +104,10 @@ void show_registered_interfaces()
 
 int main(int argc, char **argv)
 {
-    pthread_t handle;
+    pthread_t       handle;
 
     set_segfault_handler();
+
 
 #if HTTP_ONLY
     transport = create_http_transport();
@@ -111,6 +116,7 @@ int main(int argc, char **argv)
     transport = create_https_transport(context);
 #endif
     transport->bind_and_listen(SERVER_PORT);
+
 
     add_action_route("/", GET, new static_page_action(guest));
     add_action_route("/", POST, new post_form_action(tracked));
@@ -149,5 +155,6 @@ int main(int argc, char **argv)
 #if ! HTTP_ONLY
     SSL_CTX_free(context);
 #endif
+
     return 0;
 }

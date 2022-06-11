@@ -3,7 +3,6 @@
 #include <sys/socket.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,13 +16,14 @@ typedef class https_transport : public transport_i
     bool session_found;
 
 protected:
-    int describe(char* socket_name, int buffs);
+    const sockaddr* const address();
     int bind_and_listen(int port);
     transport_i * accept();
     int handshake();
     int recv(char* data, int size);
     int send(char* data, int len);
     int close();
+    int describe(char* socket_name, int buffs);
     ~https_transport();
 public:
     https_transport(SSL_CTX* c);
@@ -47,6 +47,11 @@ https_transport::~https_transport()
 
 #include <netdb.h>
 
+const sockaddr* const https_transport::address()
+{
+    return reinterpret_cast<sockaddr*>(&addr);
+}
+
 int https_transport::describe(char* socket_name, int buffs)
 {
     char name[64];
@@ -68,7 +73,7 @@ int https_transport::describe(char* socket_name, int buffs)
 int https_transport::bind_and_listen(int port)
 {
     int opt = 1;
-
+      
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);

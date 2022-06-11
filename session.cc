@@ -130,6 +130,7 @@ void http_request_t::prepare()
     _content_lenght = 0;
     _cookies.clear();
     ranges_count = 0;
+    encoding = plain;
 }
 
 void http_request_t::parse_range(char* rangestr)
@@ -205,6 +206,36 @@ void http_request_t::parse_cookies(char * cookie)
     } while (term);
 }
 
+void http_request_t::parse_encoding(char* enc)
+{
+    // gzip, deflate, br
+    encoding = plain;
+    char* ptr = enc;
+    while(true) 
+    {
+        if (*ptr == ',' || *ptr == '\0') {
+            int len = ptr - enc;
+            if (len == 4 && enc[0] == 'g' && enc[1] == 'z' && enc[2] == 'i' && enc[3] == 'p') {
+                encoding = (encoding_t) (encoding | gzip);
+                enc = ++ptr;
+            }
+            else if (len == 2 && enc[0] == 'b' && enc[1] == 'r') {
+                encoding = (encoding_t)(encoding | br);
+                enc = ++ptr;
+            }
+            else if (len == 7 && enc[0] == 'd' && enc[1] == 'e' && enc[2] == 'f' && enc[3] == 'l') {
+                encoding = (encoding_t)(encoding | deflate);
+                enc = ++ptr;
+            }
+        }
+        if (*ptr == '\0')
+            break;
+        if (*ptr == ' ')
+            enc++;
+        ptr++;
+    }
+}
+
 char * http_request_t::parse_http_header(char * header)
 {
     body = nullptr;
@@ -252,6 +283,8 @@ char * http_request_t::parse_http_header(char * header)
         case hash("Accept"):
             break;
         case hash("Accept-Encoding"):
+            parse_encoding(delim);
+//            printf("Encoding code: 0x%02x\n", encoding);
             break;
         case hash("Accept-Language"):
             break;
@@ -366,8 +399,8 @@ void * https_session_t::https_session()
         if (rcv_sz <= 0) break;
         rcv_buff[rcv_sz] = 0;
 
-        printf("\033[34m%s\033[0m", rcv_buff);
-        fflush(stdout);
+        //printf("\033[34m%s\033[0m", rcv_buff);
+        //fflush(stdout);
 
         char * header_body = parse_http_request(rcv_buff, &url);
 
