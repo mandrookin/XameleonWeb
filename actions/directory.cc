@@ -64,7 +64,7 @@ http_response_t * get_directory_action::process_req(https_session_t * session, u
                 break;
             }
             printf("%-40s %6s\n", item.c_str(), name);
-            if (response->_body_size < 31 * 1024) {
+            if (response->_body_size < 31 * 1024) { 
                 response->_body_size += snprintf(response->_body + response->_body_size, 1024, "%-40s %6s\n", item.c_str(), name);
             }
 

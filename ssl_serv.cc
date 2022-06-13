@@ -28,6 +28,11 @@ extern SSL_CTX* create_context();
 extern transport_t* create_https_transport(SSL_CTX* ctx);
 #endif
 
+session_mgr_t* get_active_sessions()
+{
+    return &session_cache;
+}
+
 void *thread_func(void *data)
 {
     char client_name[64];
@@ -126,7 +131,10 @@ int main(int argc, char **argv)
     add_action_route("/upload/", GET, new static_page_action(guest));
     add_action_route("/cgi/", GET, new cgi_action(guest));
     add_action_route("/cgi/", POST, new cgi_action(guest));
-    add_action_route("/admin/admin_header.html", GET, new static_page_action(tracked));
+
+    http_action_t* admin = new admin_action;
+    add_action_route("/admin", GET, admin);
+    add_action_route("/admin/", GET, admin);
 
     show_registered_interfaces();
 

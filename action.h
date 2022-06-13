@@ -64,3 +64,9 @@ public:
     post_form_action(access_t rights) : http_action_t(rights) {}
 };
 
+class admin_action : public http_action_t {
+    http_response_t* process_req(https_session_t* session, url_t* url);
+public:
+    admin_action() : http_action_t(admin) {}
+};
+

@@ -1,0 +1,11 @@
+        .button_adm {
+            width: 150px;
+            height: 30px;
+            background-color: #e7e7e7;
+            color: black;
+            border: 1px solid black;
+            border-radius: 4px;
+            box-shadow: 3px 3px 1px #888888;
+            margin-left: 10px;
+            margin-right: 10px;
+

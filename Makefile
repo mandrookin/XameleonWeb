@@ -3,8 +3,9 @@
 PROJECT=serv
 DEP = http.h action.h session.h
 SRC := ssl_serv.cc session.cc http_request.cc action_routes.cc ssl_context.cc session_mgr.cc \
-   lib/guid.cc lib/multipart_form.cc lib/https_transport.cc lib/http_transport.cc \
-   actions/static_pages.cc actions/directory.cc actions/classic_cgi.cc actions/post_form.cc
+   lib/guid.cc lib/multipart_form.cc lib/https_transport.cc lib/http_transport.cc lib/alloc_file.cc\
+   actions/static_pages.cc actions/directory.cc actions/classic_cgi.cc actions/post_form.cc \
+   actions/admin/admin.cc
 
 OBJDIR := obj
 
@@ -13,7 +14,7 @@ S_OBJ := $(SRC:%.cc=$(OBJDIR)/%.o)
 #	g++ -static ssl_serv.cc -lssl -lcrypto -lpthread -lz -o serv.static
 #	g++ $(SRC) -lssl -lcrypto -lpthread  -o serv
 
-CXXFLAGS=-c -Wall -Wformat-truncation=0
+CXXFLAGS=-c -Os -Wall -Wformat-truncation=0
 
 all: $(PROJECT)
 ifneq ("$(wildcard cert/cert.pem)","")
@@ -25,7 +26,7 @@ endif
 
 $(PROJECT): $(S_OBJ)
 	@echo Linking
-	g++ $^ -lssl -lcrypto -lpthread -o $@
+	g++ $^ -lssl -lcrypto -lpthread -Os -o $@
 
 $(OBJDIR):
 	echo "Create object directory"

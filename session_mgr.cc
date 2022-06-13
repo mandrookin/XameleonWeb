@@ -64,7 +64,7 @@ int session_mgr_t::remove_session(https_session_t* session)
             fprintf(stderr, "Unable remove session: source port not found\n");
             break;
         }
-        https_session_t* session = (*ports)[pr]; // ports[ipV4->sin_port];
+//        https_session_t* session = (*ports)[pr]; // ports[ipV4->sin_port];
         ports->erase(pr);
 //        delete session;
         printf("Session removed form list of active sessions\n");
