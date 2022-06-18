@@ -16,10 +16,10 @@ http_response_t * cgi_action::process_req(https_session_t * session, url_t * url
     FILE *fp;
     char  buff[BUFSIZE];
 
-    printf("ACTION: CGI [%s <- %s]\nHeader size = %d url->query_count = %d\n", 
-        url->path, url->rest, response->_header_size, url->query_count );
+    printf("ACTION: CGI [%s%s <- %s]\nHeader size = %d url->query_count = %d\n", 
+        session->get_html_root(), url->path, url->rest, response->_header_size, url->query_count );
 
-    snprintf(buff, BUFSIZE, "pages%s", (char*)url->path);
+    snprintf(buff, BUFSIZE, "%s%s", session->get_html_root(), (char*)url->path);
 
     std::string path = getenv("PATH");
     clearenv();

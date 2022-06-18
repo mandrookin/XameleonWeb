@@ -80,6 +80,7 @@ public:
 
 class https_session_t {
     transport_i     *   transport;
+    std::string         homedir;
 
 public:
     bool                cookie_found;
@@ -94,8 +95,9 @@ private:
 public:
     http_response_t * page_not_found(http_method_t method, char * url, const char * referer);
 
-    https_session_t(transport_i* transport) : transport(transport) {}
+    https_session_t(transport_i* transport, const char * homedir) : transport(transport), homedir(homedir) {}
     transport_i* get_transport() { return transport; }
+    const char*  get_html_root() { return homedir.c_str(); }
 
     void * https_session();
 };

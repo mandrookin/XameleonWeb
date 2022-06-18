@@ -15,7 +15,7 @@ http_response_t * get_directory_action::process_req(https_session_t * session, u
     struct dirent *dir;
     char  name[512];
 
-    snprintf(name, 512, "pages/%s", (char*) url->path);
+    snprintf(name, 512, "%s/%s", session->get_html_root(), (char*) url->path);
     stat(name, &path_stat);
     do {
         if (!S_ISDIR(path_stat.st_mode) || (d = opendir(name)) == nullptr)
@@ -38,7 +38,7 @@ http_response_t * get_directory_action::process_req(https_session_t * session, u
 
         for (auto item : names)
         {
-            snprintf(name, 512, "pages/%s/%s", url->path, item.c_str());
+            snprintf(name, 512, "%s%s/%s", session->get_html_root(), url->path, item.c_str());
             stat(name, &path_stat);
             switch (path_stat.st_mode & S_IFMT) {
             case S_IFREG:

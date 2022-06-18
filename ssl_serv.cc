@@ -20,6 +20,7 @@
 static volatile bool        keepRunning = true;
 static transport_i      *   transport;
 static session_mgr_t        session_cache;
+static const char       *   webpages = "pages/";
 
 #if HTTP_ONLY
 extern transport_t* create_http_transport();
@@ -107,12 +108,21 @@ void show_registered_interfaces()
         fprintf(stderr, "No interfaces detected\n");
 }
 
+void read_environment_variables()
+{
+    char* pages = getenv("WEBPAGES");
+    if (pages) {
+        webpages = pages;
+    }
+    fprintf(stderr, "WEBPAGES set to %s\n", pages);
+}
+
 int main(int argc, char **argv)
 {
     pthread_t       handle;
 
     set_segfault_handler();
-
+    read_environment_variables();
 
 #if HTTP_ONLY
     transport = create_http_transport();
@@ -152,7 +162,7 @@ int main(int argc, char **argv)
                 puts("\033[36m\nServer stopped by TERM signal\033[0m\n");
             continue;
         }
-        https_session_t* client = new https_session_t(client_transport);
+        https_session_t* client = new https_session_t(client_transport, webpages);
         if (pthread_create(&handle, NULL, thread_func, client)) {
             perror("Unable create client thread");
         }

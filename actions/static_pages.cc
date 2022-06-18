@@ -16,9 +16,9 @@ void prepare_file(
     char  filename[512];
 
     if(strcmp(url->path, "/") != 0)
-        snprintf(filename, 512, "pages/%s", url->path);
+        snprintf(filename, 512, "%s%s", session->get_html_root(), url->path);
     else
-        snprintf(filename, 512, "pages/index.html");
+        snprintf(filename, 512, "%sindex.html", session->get_html_root() );
 
     response->_code = 200;
     response->_body = alloc_file(filename, &response->_body_size);
@@ -81,7 +81,7 @@ http_response_t * static_page_action::process_req(
     prepare_file(session, url);
     response->_header_size = response->prepare_header(response->_header, response->_code, response->_body_size);
 
-    printf("ACTION 'static page': %s <- %s\n", url->path, url->rest);
+    printf("ACTION 'static page': %s%s <- %s\n", session->get_html_root(), url->path, url->rest);
     return response;
 }
 
