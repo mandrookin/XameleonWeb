@@ -9,18 +9,15 @@
 
 extern session_mgr_t* get_active_sessions();
 
-//static const char * const do_sessions(int * response_size)
-static char* const do_sessions(int* response_size)
+static char* const do_sessions(http_request_t* request, int* response_size)
 {
     std::stringstream my_ss(std::stringstream::out);
     session_mgr_t* sessions = get_active_sessions();
     for (auto const& ip : sessions->active_sessions) {
-        printf("ip.first = 0x%p\n", ip.first);
         for (auto const& session : *ip.second) {
             char str[155];
             session.second->get_transport()->describe(str, 155);
-            my_ss << str << "<br>\n";
-            printf("\t%s\n", str);
+            my_ss << str << "  <- " << request->_cookies["lid"] << "<-" << request->_cache_control << "<br>\n";
         }
     }
     *response_size = my_ss.str().size();
@@ -59,7 +56,7 @@ http_response_t* admin_action::process_req(https_session_t* session, url_t* url)
     switch (hash(url->rest))
     {
     case hash("sessions"):
-        response->_body = do_sessions(&response->_body_size);
+        response->_body = do_sessions(request, &response->_body_size);
         break;
     case hash("admin_header.html"):
         response->_body = alloc_file("pages/admin/admin_header.html", &response->_body_size);

@@ -24,9 +24,13 @@ else
 	@cd cert; sh ./cert.sh; cd ..
 endif
 
+static: $(S_OBJ)
+	@echo "Linking static"
+	g++ $^ -lssl -lcrypto -lpthread -Os -static -lstdc++ -lz -ldl -o $@
+
 $(PROJECT): $(S_OBJ)
 	@echo Linking
-	g++ $^ -lssl -lcrypto -lpthread -Os -o $@
+	g++ $^ -lssl -lcrypto -lpthread -o $@
 
 $(OBJDIR):
 	echo "Create object directory"
@@ -46,5 +50,27 @@ clean:
 	@find . -name "*.o" -type f -delete
 	@find . -name "*.cc" -o -name "*.h" -type f -exec chmod -x {} \;
 
-test:
-	@echo $(S_OBJ)
+help:
+	@echo 'Command         Action'
+	@echo '------------    --------------------------------------------------------'
+	@echo 'make            build https-server'
+	@echo 'make static     build staticaly linked https-server'
+	@echo 'make clean      remove object files'
+	@echo 'make docker     create alpine-based docker container with https-server'
+	@echo 'make run        run https-server docker container'
+	@echo 'make dclean     clean-up docker processes'
+
+docker: static
+	@echo 'Build docker container image with https-server'
+	@docker build --rm --tag=rest-web .
+
+run:
+	@docker run -p 4433:4433  -it rest-web sh
+
+PROC := $(shell docker ps -a -q -f status=exited)
+
+dclean:
+	@if [ -n "$(PROC)" ]; then \
+	      echo "docker remove exitedL is $(PROC)"; \
+	      docker rm $(PROC); \
+	fi

@@ -122,15 +122,17 @@ int main(int argc, char **argv)
 #endif
     transport->bind_and_listen(SERVER_PORT);
 
-
-    add_action_route("/", GET, new static_page_action(guest));
+    http_action_t* static_page = new static_page_action(guest);
+    add_action_route("/", GET, static_page);
     add_action_route("/", POST, new post_form_action(tracked));
     add_action_route("/favicon.ico", GET, new get_favicon_action);
     add_action_route("/reload/", GET, new get_touch_action);
     add_action_route("/upload", GET, new get_directory_action(guest));
-    add_action_route("/upload/", GET, new static_page_action(guest));
-    add_action_route("/cgi/", GET, new cgi_action(guest));
-    add_action_route("/cgi/", POST, new cgi_action(guest));
+    add_action_route("/upload/", GET, static_page);
+
+    http_action_t* cgi_bin = new cgi_action(guest);
+    add_action_route("/cgi/", GET, cgi_bin);
+    add_action_route("/cgi/", POST, cgi_bin);
 
     http_action_t* admin = new admin_action;
     add_action_route("/admin", GET, admin);
