@@ -62,6 +62,7 @@ help:
 
 docker: static
 	@echo 'Build docker container image with https-server'
+	@strip static
 	@docker build --rm --tag=rest-web .
 
 run:
@@ -71,6 +72,6 @@ PROC := $(shell docker ps -a -q -f status=exited)
 
 dclean:
 	@if [ -n "$(PROC)" ]; then \
-	      echo "docker remove exitedL is $(PROC)"; \
+	      echo "docker removed processes $(PROC)"; \
 	      docker rm $(PROC); \
 	fi
