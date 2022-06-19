@@ -2,10 +2,15 @@
 #define DEBUG_FORM
 //#define DEBUG_MSVS
 
+// Если определить, компилятор ругается на опасную устаревшую функцию
+//#define TMPNAM 1
+
 // 中国
 
 #include <cstring>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/fcntl.h>
 
 #include "../transport.h"
 #include "../multipart_form.h"
@@ -37,6 +42,29 @@ form_data_t::~form()
 // Алгоритм не отработает, если размер буфера меньше 256 байт.
 static const int BUFSIZE = 16 * 1024; // 256; // 512; // 
 static const int CACHE_SIZE = 16 * 1024;
+
+static int get_file_name(FILE* fp, char* namebuf, int bufsize)
+{
+    ssize_t nr;
+#ifndef __linux__
+    int fd = fileno(fp);
+    // Тут может навернуться, если маленький буфер передать
+    if (fcntl(fd, F_GETPATH, namebuf) == -1)
+    {
+        perror("Unable get name of temporary file");
+        return -1;
+    }
+    nr = strlen(namebuf);
+#else
+    char fnmbuf[128];
+    snprintf(fnmbuf, sizeof(fnmbuf), "/proc/self/fd/%d", fileno(fp));
+    nr = readlink(fnmbuf, namebuf, bufsize);
+    if (nr < 0) 
+        return -1;
+    else namebuf[nr] = '\0';
+#endif
+    return nr;
+}
 
 int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data_t* form_data)
 {
@@ -203,8 +231,13 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
                     goto formerror;
                 src += 2;
                 if(!section->value.empty()) {
-                    tmpnam(namebuf);
+#if TMPNAM
+                    char * nowarn = tmpnam(namebuf);
+                    printf("%s\n", nowarn);
                     section->filename = namebuf;
+#else
+                    section->fp = tmpfile();
+#endif
                 }
                 p = ctype;
                 while (*p) {
@@ -217,9 +250,17 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
                     section->content_type += *src++;
 #ifndef DEBUG_MSVS
                 if (!section->value.empty()) {
-//                    fprintf(stdout, "Create file '%s' Filename: %s\n", section->filename.c_str(), section->filename.c_str());
+#if TMPNAM
                     section->fp = fopen(section->filename.c_str(), "wb");
+#else
+                    int status = get_file_name(section->fp, namebuf, L_tmpnam);
+                    if (status < 0) {
+
+                    }
+                    section->filename = namebuf;
+#endif
                     setvbuf(section->fp, iobuf, _IOFBF, CACHE_SIZE);
+                    fprintf(stdout, "Create file '%s' Filename: %s\n", section->filename.c_str(), section->value.c_str());
                 }
 #endif
             }

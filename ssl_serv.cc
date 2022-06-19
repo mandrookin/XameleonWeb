@@ -21,6 +21,7 @@ static volatile bool        keepRunning = true;
 static transport_i      *   transport;
 static session_mgr_t        session_cache;
 static const char       *   webpages = "pages/";
+static int                  server_port = SERVER_PORT;
 
 #if HTTP_ONLY
 extern transport_t* create_http_transport();
@@ -94,7 +95,7 @@ void show_registered_interfaces()
                     printf("getnameinfo() failed: %s\n", gai_strerror(s));
                     exit(EXIT_FAILURE);
                 }
-                printf("\033[32m%s\033[0m: \033[33mhttps://%s:%u\033[0m\n", ifl->ifa_name, host, SERVER_PORT );
+                printf("\033[32m%s\033[0m: \033[33mhttps://%s:%u\033[0m\n", ifl->ifa_name, host, server_port);
             }
             //else
             //    printf("%s: Family value %d\n", ifl->ifa_name, ifl->ifa_addr->sa_family);
@@ -110,11 +111,19 @@ void show_registered_interfaces()
 
 void read_environment_variables()
 {
-    char* pages = getenv("WEBPAGES");
-    if (pages) {
-        webpages = pages;
+    char* value = getenv("WEBPAGES");
+    if (value && strlen(value) > 0) {
+        webpages = value;
     }
-    fprintf(stderr, "WEBPAGES set to %s\n", pages);
+    fprintf(stderr, "WEBPAGES path set to %s\n", webpages);
+    value = getenv("HTTPS_PORT");
+    if (value && strlen(value) > 0) {
+        int port = atoi(value);
+        if (port > 0 && port < USHRT_MAX) {
+            server_port = port;
+            fprintf(stderr, "server TCP port set %d\n", port);
+        }
+    }
 }
 
 int main(int argc, char **argv)
@@ -130,7 +139,7 @@ int main(int argc, char **argv)
     SSL_CTX * context = create_context();
     transport = create_https_transport(context);
 #endif
-    transport->bind_and_listen(SERVER_PORT);
+    transport->bind_and_listen(server_port);
 
     http_action_t* static_page = new static_page_action(guest);
     add_action_route("/", GET, static_page);
