@@ -1,0 +1,24 @@
+#!/bin/bash
+
+echo '<html><head>'
+echo '<meta charset="utf-8">'
+echo '<title>Simple example shell CGI</title>'
+echo '</meta></head>'
+echo '<body><h1>Информация о процессоре:</h1><br/>'
+echo '<pre>'
+cat /proc/cpuinfo
+# | while read line
+#do
+#   echo " $line<br/>"
+#done
+echo '</pre><br/>'
+echo '<h1>Информация о диске:</h1><br/>'
+echo '<pre>'
+df -m /
+echo '</pre><br/>'
+echo '<h1>Информация о памяти:</h1><br/>'
+echo '<pre>'
+cat /proc/meminfo
+echo '</pre><br/>'
+echo '</body>'
+echo '</html>'
