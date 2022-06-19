@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <title>Demo page</title>
     <style>
 
-        @import url('https://fonts.googleapis.com/css2?family=Ms+Madi&display=swap');
+        <!-- @import url('https://fonts.googleapis.com/css2?family=Ms+Madi&display=swap'); -->
 
         * {
             margin: 0;
@@ -24,13 +24,14 @@
         }
 
         h1 {
-            font-family: 'Ms Madi';
+            <!-- font-family: 'Ms Madi'; -->
+            font-family: Verdana;
             box-shadow: 10px 10px 5px #888888;
-            text-align: center;
-            font-size: 40px;
+            text-align: left;
+            font-size: 16px;
             background: lightseagreen;
             padding: 10px 0 10px 0;
-	    margin: 0px 25px 0px 25px;
+            margin: 0px 25px 0px 25px;
         }
 
         p {
@@ -38,12 +39,10 @@
             width: 800px;
             height: auto;
             margin: auto;
-            border-width: 3px;
-            border-style: solid;
-            border-color: black;
-            background-color: rgb(176, 230, 248);
+            border: none;
+            background: none;
             text-align: justify;
-            font-size: 20px;
+            font-size: 16px;
         }
 
         .button3 {
@@ -60,36 +59,33 @@
     </style>
 </head>
 <body>
-    <h1>Inline CSS Example</h1>
-    <br>
-    <table>
-        <tr>
-            <th style="width: 100px;">Параметр</th>
-            <th style="width: 300px; ">Значение</th>
-        </tr>
-        <tr>
-            <td style="width: 100px;">Скорость</td>
-            <td style="width: 300px; text-align: center;"><span  id="speed">120 км/ч</span></td>
-        </tr>
-        <tr>
-            <td style="width: 100px;">Время</td>
-            <td style="width: 300px; text-align: center;"><span id="time">100 сек</span></td>
-        </tr>
-        <tr>
-	    <td style="width: 100px;">Расстояние</td>
-            <td style="width: 300px; text-align: center;"><span id="result"></span></td>
-        </tr>
-    </table>
-    <br>
-    <center>
-        <button type="button" class="button3" onclick="location.href='/admin/admin_header.html'">Админ</button>
-        <button type="button" class="button3" onclick="location.href='/cgi/env'">CGI-bin</button>
-        <button type="button" class="button3" onclick="location.href='about.html'">О сервере</button>
-        <button type="button" class="button3" onclick="location.href='login.html'">Войти</button>
-    </center>
-    <br>
+    <h1>
+        <table align="center" style="margin-left: auto; margin-right: auto; background: none; border: none">
+            <tr style="font-family: Tahoma">
+                <th style="width: 200px; background: none; border: none">Идея</th>
+                <th style="width: 300px; background: none; border: none">Средства разработки</th>
+                <th style="width: 300px; background: none; border: none">Поддержка</th>
+            </tr>
+            <tr style="background: none; border: none">
+                <td style="width: 200px; background: none; border: none;"><a href="https://rksi.ru" target="_blank">РКСИ</a></td>
+                <td style="width: 300px; background: none; border: none"><a href="https://fastreport.ru/ru" target="_blank">Быстрые отчёты</a></td>
+                <td style="width: 300px; background: none; border: none"><a href="https://reportinglab.ru/" target="_blank">Лаборатория отчётов</a></td>
+            </tr>
+        </table>
+    </h1>
+    <br />
+    <div>
+        <center style="margin-bottom: 10px; margin-top: 10px">
+            <button type="button" class="button3" onclick="location.href='about.html'">О сервере</button>
+            <button type="button" class="button3" onclick="location.href='/admin/admin_header.html'">Админ</button>
+            <button type="button" class="button3" onclick="location.href='/cgi/env'">CGI-bin</button>
+            <button type="button" class="button3" onclick="location.href='about.html'">Отправить файлы</button>
+            <button type="button" class="button3" onclick="location.href='login.html'">Войти</button>
+        </center>
+    </div>
     <p>
-        Опыты показали, что при должном количестве  хороших  перелетов  и  форм
+        <br />&emsp;
+        “Опыты показали, что при должном количестве  хороших  перелетов  и  форм
         немолодое ответственное лицо вскоре уйдет в отставку. Нередко  такие  люди
         уходили до начала  процедур.  Заслышав  о  конференции  в  Стокгольме  или
         Ванкувере, они понимают,  что  час  их  настал.  Суровые  меры  приходится
@@ -104,19 +100,39 @@
         утра был уже в самолете. Приземлился в Ипо как раз к завтраку, посетил две
         плантации, один рудник, еще одну плантацию (масличных пальм) и  консервный
         завод. После званого обеда в  деловом  клубе  осмотрел  школу,  клинику  и
-        английский сеттльмент. Вечером был на двух приемах и на китайском  банкете
+        английский сеттльмент. Вечером был на двух приемах и на китайском  <span style="color: #FF7A59">банкете</span>
         из двадцати блюд, где пили стаканами бренди. Деловые  переговоры  начались
         на следующее утро и продолжались три дня, а оживляли их официальные приемы
         и ежевечерние банкеты в восточном стиле. Уже на пятый день стало ясно, что
         курс тяжеловат, так как гость не мог ходить, если его  не  вели  под  руки
         секретарь и личный помощник. На шестой день он умер, подтвердив тем  самым
         разговоры о том, что ему  не  по  себе.  В  наше  время  такие  методы  не
-        рекомендуются, да они и не нужны. Народ научился уходить вовремя.
+        рекомендуются, да они и не нужны. Народ научился уходить вовремя.”
         <br /><br />
-        Since the default text color for the page is black, the paragraph is black. However, thanks to
-        <span style="color: #FF7A59">inline CSS</span>, I can change the color of a few words within a paragraph to orange to
-        make it really stand out.
+        <a href="https://ru.wikipedia.org/wiki/Законы_Паркинсона" target="_blank">Законы Паркинсона</a>
+        <br />
     </p>
+    <div>
+        <table align="right" style="padding-right: 15px; margin-right: 20px; ">
+            <tr>
+                <th style="width: 100px;">Параметр</th>
+                <th style="width: 300px; ">Значение</th>
+            </tr>
+            <tr>
+                <td style="width: 100px;">Скорость</td>
+                <td style="width: 300px; text-align: center;"><span id="speed">109 км/ч</span></td>
+            </tr>
+            <tr>
+                <td style="width: 100px;">Время</td>
+                <td style="width: 300px; text-align: center;"><span id="time">100 сек</span></td>
+            </tr>
+            <tr>
+                <td style="width: 100px;">Расстояние</td>
+                <td style="width: 300px; text-align: center;"><span id="result"></span></td>
+            </tr>
+        </table>
+        <br />
+    </div>
 </body>
 </html>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
@@ -125,15 +141,15 @@
         setInterval(timer, 1000);
     });
 
-    
+
     function timer() {
-	var td = document.getElementById('time');
-	var time = parseInt(td.innerHTML);
-	time++;
-	td.innerHTML = time + ' сек';
-	var speed = parseInt(document.getElementById('speed').innerHTML);
-	var data = document.getElementById("result");
-	let v = speed / 3600 * time;  //120 / 60 / 60 * 100;
-	data.innerHTML = v.toFixed(2) + ' км';
+        var td = document.getElementById('time');
+        var time = parseInt(td.innerHTML);
+        time++;
+        td.innerHTML = time + ' сек';
+        var speed = parseInt(document.getElementById('speed').innerHTML);
+        var data = document.getElementById("result");
+        let v = speed / 3600 * time;  //120 / 60 / 60 * 100;
+        data.innerHTML = v.toFixed(2) + ' км';
     }
 </script>
