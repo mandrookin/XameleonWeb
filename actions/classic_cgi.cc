@@ -109,6 +109,15 @@ http_response_t * cgi_action::process_req(https_session_t * session, url_t * url
 
             /* do parent stuff */
             fp = fdopen(PARENT_READ, "rb");
+
+            FILE* ofp = fdopen(PARENT_WRITE, "wb");
+            if (!ofp) {
+                perror("Unable fdopen write pipe. TODO: Check resoiurces leak here");
+                continue;
+            }
+            int l = fwrite((const void*)request->body, 1, (size_t)request->_content_lenght, ofp);
+            fclose(ofp);
+//            printf("#### %d -> %d\n", request->_content_lenght, l);
         }
 #endif
 
