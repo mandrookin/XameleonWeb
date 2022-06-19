@@ -1,5 +1,6 @@
 ﻿#include <sys/stat.h>
 #include <string.h>
+#include <unistd.h>
 
 // 中国
 
@@ -57,17 +58,65 @@ http_response_t * cgi_action::process_req(https_session_t * session, url_t * url
         setenv("CONTENT_LENGTH", std::to_string(request->_content_lenght).c_str(), false);
         setenv("PATH", path.c_str(), false);
 
-
+#if POPEN
         if ((fp = popen(buff, "r")) == NULL) {
             session->page_not_found(GET, url->path, request->_referer.c_str());
             continue;
         }
+#else   
+        // Решение: http://unixwiz.net/techtips/remap-pipe-fds.html
+        int	writepipe[2] = { -1,-1 },	/* parent -> child */
+            readpipe[2] = { -1,-1 };	/* child -> parent */
+        pid_t	childpid;
+
+        if (pipe(readpipe) < 0 || pipe(writepipe) < 0)
+        {
+            perror("Cannot create pipe for CGI");
+            puts("/* close readpipe[0] & [1] if necessary */");
+            continue;
+        }
+
+
+#define	PARENT_READ	readpipe[0]
+#define	CHILD_WRITE	readpipe[1]
+#define CHILD_READ	writepipe[0]
+#define PARENT_WRITE	writepipe[1]
+
+        if ((childpid = fork()) < 0)
+        {
+            perror("Cannot fork child");
+            continue;
+        }
+        else if (childpid == 0)	/* in the child */
+        {
+            close(PARENT_WRITE);
+            close(PARENT_READ);
+
+            dup2(CHILD_READ, 0);  close(CHILD_READ);
+            dup2(CHILD_WRITE, 1);  close(CHILD_WRITE);
+
+            /* do child stuff */
+            extern char** environ;
+            char* argv[2];
+            argv[1] = nullptr;
+            argv[0] = buff;
+            execve(buff, argv, environ);
+        }
+        else				/* in the parent */
+        {
+            close(CHILD_READ);
+            close(CHILD_WRITE);
+
+            /* do parent stuff */
+            fp = fdopen(PARENT_READ, "rb");
+        }
+#endif
 
         response->_body = new char[MAXRESPONSE];
         response->_body_size = 0;
 
         while (fgets(buff, BUFSIZE, fp) != NULL) {
-            printf("OUTPUT: %s", buff);
+            //printf("OUTPUT: %s", buff);
             int l = strlen(buff);
             if (response->_body_size + l > MAXRESPONSE)
                 break;
