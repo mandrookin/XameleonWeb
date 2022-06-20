@@ -1,6 +1,7 @@
 ﻿#include <sys/stat.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 // 中国
 
@@ -82,6 +83,8 @@ http_response_t * cgi_action::process_req(https_session_t * session, url_t * url
 #define CHILD_READ	writepipe[0]
 #define PARENT_WRITE	writepipe[1]
 
+//        printf("Before fork\n");
+
         if ((childpid = fork()) < 0)
         {
             perror("Cannot fork child");
@@ -100,12 +103,17 @@ http_response_t * cgi_action::process_req(https_session_t * session, url_t * url
             char* argv[2];
             argv[1] = nullptr;
             argv[0] = buff;
+
+//            printf("Before execve in child\n");
             execve(buff, argv, environ);
         }
         else				/* in the parent */
         {
+            int status = 0;
             close(CHILD_READ);
             close(CHILD_WRITE);
+
+//            printf("Before send form to child\n");
 
             /* do parent stuff */
             fp = fdopen(PARENT_READ, "rb");
@@ -116,8 +124,12 @@ http_response_t * cgi_action::process_req(https_session_t * session, url_t * url
                 continue;
             }
             int l = fwrite((const void*)request->body, 1, (size_t)request->_content_lenght, ofp);
+            if (l != request->_content_lenght) {
+                fprintf(stderr, "Sent broken response\n");
+            }
             fclose(ofp);
-//            printf("#### %d -> %d\n", request->_content_lenght, l);
+            wait(&status);
+//            printf("#### %d -> %d  STATUS: %d\n", request->_content_lenght, l, status);
         }
 #endif
 

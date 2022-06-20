@@ -10,6 +10,7 @@ http_response_t * post_form_action::process_req(https_session_t * session, url_t
 {
     http_request_t      *   request = &session->request;
     http_response_t     *   response = &session->response_holder;
+    FILE                *   copy = nullptr;
 
 #if false
     const int   BUFSIZE = 32 * 1024;
@@ -59,12 +60,43 @@ http_response_t * post_form_action::process_req(https_session_t * session, url_t
 #if false // Not works between mounts
                 if (link(section->filename.c_str(), buff) < 0)
                     perror("Unable link file");
-#else
+#elif false // Not comptible with mktemp
                 {
                     std::ifstream ifs(section->filename, std::ios::in | std::ios::binary);
+                    ifs.seekg(0);
                     std::ofstream ofs(buff, std::ios::out | std::ios::binary);
                     ofs << ifs.rdbuf();
                 }
+#else
+                if (section->fp == nullptr) {
+                    fprintf(stderr, "File handle is not prepared\n");
+                    continue;
+                }
+                printf("Copy file %s -> %s\n", section->filename.c_str(), section->value.c_str());
+
+                fflush(section->fp);
+                fseek(section->fp, 0, SEEK_SET);
+                copy = fopen(buff, "wb");
+                if (copy == nullptr) {
+                    fprintf(stderr, "Unable create file %s\n", buff);
+                    continue;
+                }
+                char data[65536];
+                ssize_t count;
+                while(true)
+                {
+                    count = fread(data, 1, sizeof(data), section->fp);
+                    if (count < 0) {
+                        fprintf(stderr, "Unable read temporary file\n");
+                        break;
+                    }
+                    if (count == 0)
+                        break;
+                    fwrite(data, count, 1, copy);
+                }
+                fclose(copy);
+                fclose(section->fp);
+                section->fp = nullptr;
 #endif
                 holder += "Link file '" + section->filename + "' to '/upload/" + section->value + "'<br/>";
                 break;

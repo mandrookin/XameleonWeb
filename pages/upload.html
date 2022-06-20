@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <title>Qiuck start</title>
+    <title>Upload</title>
     <style>
 
         * {
@@ -57,13 +57,27 @@
 </head>
 
 <body>
-    <h1>Xameleon Web Server</h1>
+    <h1>Тест загрузки файлов</h1>
     <br>
     <br>
     <p>
-        Исходный код проекта <a href="https://github.com/mandrookin/XameleonWeb">Xameleon Web Server</a>.<br>
+        В настощий момент страница используется для теста загрузки файлов в разделе <a href="/upload">Отправленные файлы</a>.<br>
+        <h2>Не отправляйте приватную информацию!</h2>
     </p>
     <br>
+    <form id="uploadbanner" enctype="multipart/form-data" method="post" action="#">
+        <input type="text" name="first" style="border: 2px solid gray; border-radius: 4px" width="120px" value="Mark">
+        <br><br>
+        <input type="text" name="last" style="border: 2px solid gray; border-radius: 4px" width="120px" value="Twain">
+        <br><br>
+        <input id="fileupload" name="myfile" type="file" />
+        <br><br>
+        <input id="fileupload" name="hisfile" type="file" />
+        <br><br>
+        <input id="fileupload" name="lastfile" type="file" />
+        <br><br>
+        <button type="submit" class="button3">Отправить</button>
+    </form>
     <br>
     <a href="/">Вернуться на главную страницу</a>
 </body>

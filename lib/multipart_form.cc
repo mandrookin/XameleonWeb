@@ -116,8 +116,10 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
 //                    printf("Finished. Type is %d\n", section->type);
                     if (section->size != 0) {
                         if (section->fp != nullptr) {
+#if TMPNAM
                             fclose(section->fp);
                             section->fp = nullptr;
+#endif
                         }
                         form_data->_objects.push_back(section);
                         section = nullptr;
@@ -178,8 +180,10 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
                     form_data->_objects.push_back(section);
 #ifndef DEBUG_MSVS
                     if (section->fp != nullptr) {
+#if TMPNAM
                         fclose(section->fp);
                         section->fp = nullptr;
+#endif
                     }
 #endif
                 }
@@ -255,7 +259,8 @@ int parse_form_data(transport_t* fp, int rest_size, const char* bound, form_data
 #else
                     int status = get_file_name(section->fp, namebuf, L_tmpnam);
                     if (status < 0) {
-
+                        perror("Unable get temporary file");
+                        goto formerror;
                     }
                     section->filename = namebuf;
 #endif
