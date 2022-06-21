@@ -395,7 +395,9 @@ void * https_session_t::https_session()
         //  if(ev < 0) { printf("Terminate waiting\n"); break; }
         if (ev <= 0) { printf("Closing connection on timeout\n"); break; }
 #endif
-        rcv_sz = transport->recv(rcv_buff, 4096);
+        const long long timeout_5_minutes = 100000 * 60 * 5;
+        const long long timeout_5_seconds = 100000 * 5;
+        rcv_sz = transport->recv(rcv_buff, 4096, transport->is_secured() ?  timeout_5_minutes : timeout_5_seconds);
         if (rcv_sz <= 0) break;
         rcv_buff[rcv_sz] = 0;
 

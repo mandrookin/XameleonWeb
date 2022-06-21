@@ -21,6 +21,7 @@ protected:
     transport_i * accept();
     int handshake();
     int recv(char* data, int size);
+    int recv(char* data, int size, long long timeout);
     int send(char* data, int len);
     int close();
     int describe(char* socket_name, int buffs);
@@ -171,6 +172,27 @@ int https_transport::recv(char* data, int size)
 {
     int status = SSL_read(ssl, data, size);
 //    printf("recv %u byes:\n%s\n", status, data);
+    return status;
+}
+
+int https_transport::recv(char* data, int size, long long time)
+{
+    // create a socket set containing just this socket
+    fd_set socket_set;
+    FD_ZERO(&socket_set);
+    int fd = SSL_get_fd(ssl);
+    FD_SET(fd, &socket_set);
+
+    struct timeval timeout = { time / 1000000, time % 1000000 };
+
+    int count = select(fd + 1, &socket_set, NULL, NULL, &timeout);
+    if (count <= 0) {
+        printf("HTTPS select return %d\n", count);
+        return count;
+    }
+
+    int status = SSL_read(ssl, data, size);
+    //    printf("recv %u byes:\n%s\n", status, data);
     return status;
 }
 

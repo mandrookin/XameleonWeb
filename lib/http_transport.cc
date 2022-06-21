@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/select.h>
 
 typedef class http_transport : public transport_i
 {
@@ -21,6 +22,7 @@ protected:
     transport_i * accept();
     int handshake();
     int recv(char* data, int size);
+    int recv(char* data, int size, long long timeout);
     int send(char* data, int len);
     int close();
     int is_secured() { return 0; }
@@ -132,6 +134,31 @@ int http_transport::recv(char* data, int size)
 int http_transport::send(char* snd_buff, int len)
 {
     return ::send(socket, snd_buff, len, 0);
+}
+
+int http_transport::recv(char* data, int size, long long time)
+{
+    fd_set set;
+    struct timeval timeout;
+
+    FD_ZERO(&set);
+    FD_SET(socket, &set);
+
+    timeout.tv_sec = time / 1000000;;
+    timeout.tv_usec = time % 1000000;;
+
+    /* select returns 0 if timeout, 1 if input available, -1 if error. */
+    int ev = select(socket + 1, &set, NULL, NULL, &timeout);
+    if(ev == 0) { 
+        printf("Socket timeout. Start closing procedure\n"); 
+        return 0; 
+    }
+    if(ev < 0) { 
+        fprintf(stderr, "Socket error on select with timeout: %d\n", errno); 
+        return ev;
+    }
+
+    return recv(data, size);
 }
 
 transport_t* create_http_transport()
