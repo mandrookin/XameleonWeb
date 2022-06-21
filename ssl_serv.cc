@@ -8,6 +8,8 @@
 #include <openssl/err.h>
 //#include <fcntl.h>
 #include <signal.h>
+#include <pwd.h>
+#include <grp.h>
 
 #include "transport.h"
 #include "session.h"
@@ -174,6 +176,38 @@ int configure()
     return 0;
 }
 
+void drop_privileges()
+{
+    if (getuid() == 0) {
+        struct group* pGrp = getgrnam("nobody");
+        if(pGrp == nullptr)
+            pGrp = getgrnam("nogroup");
+        if (pGrp == nullptr) {
+            fprintf(stderr, "getgrnam: groups 'nobody' or 'nogroup' not found");
+            exit(1);
+        }
+        struct passwd* p = getpwnam("nobody");
+        if (p == nullptr) {
+            fprintf(stderr, "getpwnam: user 'nobody' not found");
+            exit(1);
+        }
+
+        /* process is running as root, drop privileges */
+        if (setgid(pGrp->gr_gid) != 0) {
+            fprintf(stderr, "setgid: Unable to drop group privileges: %s", strerror(errno));
+            exit(1);
+        }
+        if (setuid(p->pw_uid) != 0) {
+            fprintf(stderr, "setuid: Unable to drop user privileges: %s", strerror(errno));
+            exit(1);
+        }
+        if (setuid(0) != -1) {
+            fprintf(stderr, "ERROR: Managed to regain root privileges?");
+            exit(1);
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     pthread_t       handle;
@@ -207,6 +241,8 @@ int main(int argc, char **argv)
     add_action_route("/admin/", GET, admin);
 
     show_registered_interfaces();
+
+    drop_privileges();
 
     transport_i* client_transport = nullptr;
 

@@ -11,7 +11,8 @@ do
    echo " $line<br/>"
 done
 echo '<br/>'
-echo '<a href="/">Вернуться назад</a>'
+echo '<a href="/">Вернуться назад</a><br/><br/>'
+echo "UID: `whoami`"
 echo '</body>'
 echo '</html>'
 
