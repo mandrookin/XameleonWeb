@@ -23,6 +23,7 @@ protected:
     int recv(char* data, int size);
     int send(char* data, int len);
     int close();
+    int is_secured() { return 0; }
     ~http_transport();
 public:
     http_transport();

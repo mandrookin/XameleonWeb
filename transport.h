@@ -11,6 +11,7 @@ public:
     virtual int send(char * data, int len) = 0;
     virtual int close() = 0;
     virtual int describe(char* socket_name, int buffs) = 0;
+    virtual int is_secured() = 0;
     virtual ~transport_i() {}
 } transport_t;
 

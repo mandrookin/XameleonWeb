@@ -19,12 +19,14 @@
 
 static volatile bool        keepRunning = true;
 static transport_i      *   transport;
+static transport_i      *   redirector_transport = nullptr;
 static session_mgr_t        session_cache;
 static const char       *   webpages = "pages/";
 static int                  server_port = SERVER_PORT;
 
-#if HTTP_ONLY
+
 extern transport_t* create_http_transport();
+#if HTTP_ONLY
 #else
 extern SSL_CTX* create_context();
 extern transport_t* create_https_transport(SSL_CTX* ctx);
@@ -126,12 +128,59 @@ void read_environment_variables()
     }
 }
 
+void* redirector_thread(void* data)
+{
+    char client_name[64];
+
+    pthread_detach(pthread_self());
+    redirector_transport = create_http_transport();;
+    redirector_transport->bind_and_listen(80);
+    redirector_transport->describe(client_name, sizeof(client_name));
+    printf("Redirector thread will accept incoming connections on '%s'\n", client_name);
+
+    while (keepRunning) {
+        transport_i* client_transport = nullptr;
+
+        client_transport = redirector_transport->accept();
+        if (!client_transport) {
+            if (keepRunning)
+                perror("Unable accept incoming HTTP connnection");
+            else
+                puts("\033[36m\nServer stopped by TERM signal\033[0m\n");
+            continue;
+        }
+        https_session_t* client = new https_session_t(client_transport, webpages);
+        client->https_session();
+        delete client;
+        delete client_transport;
+    }
+    printf("Redirector thread '%s' exit\n", client_name);
+    pthread_exit(NULL);
+}
+
+
+int configure()
+{
+    if (geteuid() == 0)
+    { 
+        pthread_t       redirector_thread_handle;
+        if (pthread_create(&redirector_thread_handle, NULL, redirector_thread, nullptr)) {
+            perror("Unable create client thread");
+            return -1;
+        }
+        if (server_port == SERVER_PORT)
+            server_port = 443;
+    }
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     pthread_t       handle;
 
     set_segfault_handler();
     read_environment_variables();
+    configure();
 
 #if HTTP_ONLY
     transport = create_http_transport();

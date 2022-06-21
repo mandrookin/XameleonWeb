@@ -24,6 +24,7 @@ protected:
     int send(char* data, int len);
     int close();
     int describe(char* socket_name, int buffs);
+    int is_secured() { return 1; };
     ~https_transport();
 public:
     https_transport(SSL_CTX* c);

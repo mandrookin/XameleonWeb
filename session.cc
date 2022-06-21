@@ -428,6 +428,16 @@ void * https_session_t::https_session()
                 break;
             }
         }
+        else if (transport->is_secured() == 0) {
+            response = &response_holder;
+            char    jump_to[1024];
+            if (request._referer.size() > 0) {
+                printf("TODO: catch reference from '%s'\n", request._referer.c_str());
+            }
+            printf("Redirect tp host: %s\n", request._host.c_str());
+            snprintf(jump_to, sizeof(jump_to) - 1, "https://%s", request._host.c_str());
+            response->_header_size = response->redirect_to(302, jump_to);
+        }
         else {
             //printf("Rights: %d Cookie found: %d\n", action->get_rights(), cookie_found);
             if (action->get_rights() == tracked && !cookie_found /*&& !session_found*/ ) {
