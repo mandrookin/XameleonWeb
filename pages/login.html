@@ -45,7 +45,7 @@ button:hover {
 }
 
 img.avatar {
-  width: 40%;
+  width: 30%;
   border-radius: 50%;
 }
 
@@ -127,16 +127,20 @@ span.psw {
 </head>
 <body>
 
-<h2>Modal Login Form</h2>
-
-<button onclick="document.getElementById('id01').style.display='block'" style="width:100px;">Login</button>
-<a href="/"><button style="width:100px;">Back</button></a>
-<br>
+<h2>Пример модальной формы входа</h2>
+<p>
+<h3>ВНИМАНИЕ! Это тестовый сервер для отладки программного обеспечения! НЕ ВВОДИТЕ РЕАЛЬНЫЕ ДАННЫЕ!</h3>
+Отправленные формой данные будут переданы сервером через CGI-BIN интерфейс программе на языке Python, которая возвратит HTML страницу с принятыми данными.
+</p>
+<br/>
+<button onclick="document.getElementById('id01').style.display='block'" style="width:150px;">Авторизация</button>
+<a href="/"><button style="width:105px;">Вернуться</button></a>
+<br/>
 <img src="librarian.svg" alt="Avatar" class="avatar">
 
 <div id="id01" class="modal">
   
-  <form class="modal-content animate" action="/cgi/env.py" method="post">
+  <form class="modal-content animate" action="/cgi/login.py" method="post">
     <div class="imgcontainer">
       <span onclick="document.getElementById('id01').style.display='none'" class="close" title="Close Modal">&times;</span>
     </div>
@@ -149,14 +153,14 @@ span.psw {
       <input type="password" placeholder="Enter Password" name="psw" required>
         
       <label>
-        <input type="checkbox" checked="checked" name="remember"> Remember me
+        <input type="checkbox" checked="checked" name="remember">Запомнить меня
       </label>
     </div>
 
     <div class="container" style="background-color:#f1f1f1">
-      <button type="submit">Login</button>
+      <button type="submit">Войти</button>
 	&nbsp; &nbsp; &nbsp; &nbsp;
-      <button type="button" onclick="document.getElementById('id01').style.display='none'" class="cancelbtn">Cancel</button>
+      <button type="button" onclick="document.getElementById('id01').style.display='none'" class="cancelbtn">Отменить</button>
       <span class="psw">Forgot <a href="#">password?</a></span>
     </div>
   </form>
