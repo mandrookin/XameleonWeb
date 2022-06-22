@@ -12,14 +12,31 @@ extern session_mgr_t* get_active_sessions();
 static char* const do_sessions(http_request_t* request, int* response_size)
 {
     std::stringstream my_ss(std::stringstream::out);
+
+    my_ss <<
+        "<table align='left' width: 100%; style='padding-right: 15px; margin-right: 20px; '>"
+        "<tr align='left'>"
+        "<th style='width: 30%;'>Remote</th>"
+        "<th style='width: 40%;'>ID</th>"
+        "<th style='width: 30%;'>Time</th>"
+        "</tr>";
+
     session_mgr_t* sessions = get_active_sessions();
     for (auto const& ip : sessions->active_sessions) {
         for (auto const& session : *ip.second) {
             char str[155];
             session.second->get_transport()->describe(str, 155);
-            my_ss << str << "  <- " << request->_cookies["lid"] << "<-" << request->_cache_control << "<br>\n";
+            my_ss << 
+                // str << "  <- " << request->_cookies["lid"] << "<-" << request->_cache_control << "<br>\n";
+                "<tr>"
+                "<td style='width: 30%; '>" << str << "</td>"
+                "<td style='width: 40%; '><span id='lid'>" << request->_cookies["lid"] << "</span></td>"
+                "<td style='width: 30%; '></td>"
+                "</tr>";
         }
     }
+    my_ss << "</table>";
+
     *response_size = my_ss.str().size();
     char* p = new char[*response_size + 1];
     strcpy(p, my_ss.str().c_str());

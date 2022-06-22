@@ -68,7 +68,7 @@ int https_transport::describe(char* socket_name, int buffs)
         printf("http_transport::describe - getnameinfo() failed: %s\n", gai_strerror(s));
         return -1;
     }
-    snprintf(socket_name, buffs, "HTTPS <- %s:%u", name, htons(addr.sin_port));
+    snprintf(socket_name, buffs, "%s:%u", name, htons(addr.sin_port));
     return s;
 }
 
