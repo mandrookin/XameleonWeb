@@ -1,0 +1,18 @@
+#!/bin/sh
+
+
+echo '<html><head>'
+echo '<meta charset="utf-8">'
+echo '<title>Simple example shell CGI</title>'
+echo '</meta></head>'
+echo '<body><h1>Вывод nohup.out:</h1><br/>'
+
+tail -n 1000 nohup.out | while read line
+do
+   echo " $line<br/>"
+done
+echo '<br/>'
+echo '<a href="/">Вернуться назад</a><br/><br/>'
+echo "UID: `whoami`"
+echo '</body>'
+echo '</html>'
