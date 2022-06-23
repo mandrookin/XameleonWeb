@@ -132,6 +132,7 @@ void http_request_t::prepare()
     _cookies.clear();
     ranges_count = 0;
     encoding = plain;
+    port = 0; // Использовать порт по умолчанию, если не задан
 }
 
 void http_request_t::parse_range(char* rangestr)
@@ -262,9 +263,15 @@ char * http_request_t::parse_http_header(char * header)
         *delim = '\0';
         delim += 2;
 
+        char* pcolon;
         switch (hash(line))
         {
         case hash("Host"):
+            pcolon = strchr(delim, ':');
+            if (pcolon) {
+                *pcolon++ = '\0';
+                port = atoi(pcolon);
+            }
             _host = delim;
             break;
         case hash("Connection"):
@@ -378,24 +385,6 @@ void * https_session_t::https_session()
 
     while (1) 
     {
-#if CONNECTION_TIMEOUT  // TODO
-        fd_set set;
-        struct timeval timeout;
-
-        /* Initialize the file descriptor set. */
-        FD_ZERO(&set);
-        FD_SET(context->client, &set);
-
-        /* Initialize the timeout data structure. */
-        timeout.tv_sec = 10;
-        timeout.tv_usec = 0;
-
-        /* select returns 0 if timeout, 1 if input available, -1 if error. */
-        int ev = select(context->client + 1, &set, NULL, NULL, &timeout);
-        //  if(ev == 0) { printf("Socket timeout\n"); continue; }
-        //  if(ev < 0) { printf("Terminate waiting\n"); break; }
-        if (ev <= 0) { printf("Closing connection on timeout\n"); break; }
-#endif
         const long long timeout_5_minutes = 100000 * 60 * 5;
         const long long timeout_5_seconds = 100000 * 5;
         rcv_sz = transport->recv(rcv_buff, 4096, transport->is_secured() ?  timeout_5_minutes : timeout_5_seconds);
@@ -437,7 +426,7 @@ void * https_session_t::https_session()
             if (request._referer.size() > 0) {
                 printf("TODO: catch reference from '%s'\n", request._referer.c_str());
             }
-            printf("Redirect tp host: %s\n", request._host.c_str());
+            printf("Redirect to host: %s\n", request._host.c_str());
             snprintf(jump_to, sizeof(jump_to) - 1, "https://%s", request._host.c_str());
             response->_header_size = response->redirect_to(302, jump_to, false);
         }

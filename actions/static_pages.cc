@@ -1,4 +1,4 @@
-#include <unistd.h>
+п»ї#include <unistd.h>
 #include <fcntl.h>
 #include <cstring>
 
@@ -114,8 +114,7 @@ http_response_t * get_touch_action::process_req(https_session_t * session, url_t
         printf("  '%s': %s\n", url->query[i].key, url->query[i].val);
         if (strcmp(url->query[i].key,"url") == 0) {
             strcpy(url->path, url->query[i].val);
-            // Здесь бы по новой всё обработать, чтобы вернуть на изначально правильную страницу.
-            // Ну и куки и прочие секретные вещички поднастроить...
+            // Р—РґРµСЃСЊ РїРѕРєР° РїРѕР»РѕРјР°РЅРѕ.
             response->add_cookie("lid", id.c_str(), 31536000);
             response->_header_size = response->redirect_to(308, session->request._referer.c_str(), true);
             found = true;

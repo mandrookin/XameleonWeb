@@ -37,6 +37,7 @@ class http_request_t {
 public:
     std::map<std::string, std::string>  _cookies;
     std::string _host;
+    unsigned short port;
     std::string _referer;
     std::string _content_type;
     std::string _cache_control;
