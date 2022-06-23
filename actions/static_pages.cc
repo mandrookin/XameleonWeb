@@ -117,7 +117,7 @@ http_response_t * get_touch_action::process_req(https_session_t * session, url_t
             // «десь бы по новой всЄ обработать, чтобы вернуть на изначально правильную страницу.
             // Ќу и куки и прочие секретные вещички поднастроить...
             response->add_cookie("lid", id.c_str(), 31536000);
-            response->_header_size = response->redirect_to(308, session->request._referer.c_str());
+            response->_header_size = response->redirect_to(308, session->request._referer.c_str(), true);
             found = true;
         }
     }

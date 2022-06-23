@@ -80,14 +80,15 @@ void http_response_t::add_cookie(const char * name, const char *value, unsigned 
     _cookies[name] = { value, seconds };
 }
 
-int http_response_t::redirect_to(int code, const char * url)
+int http_response_t::redirect_to(int code, const char * url, bool keep_alive)
 {
     int size = 
     snprintf(_header, sizeof(_header), // Будь осторожен, впоследствии header будет указателем на локальные данные и тогда от sizeof всё рассыпется
         "HTTP/1.1 %u Found\r\n"
-        "Connection: keep-alive\r\n"
+        "Connection: %s\r\n"
         "",
-        code
+        code,
+	keep_alive ? "keep-alive" : "close"
     );
     size += add_cookies_to_header(_header + size, sizeof(_header) - size);
     size += snprintf(_header + size, sizeof(_header) - size, "Location: %s\r\n\r\n", url);
@@ -438,7 +439,7 @@ void * https_session_t::https_session()
             }
             printf("Redirect tp host: %s\n", request._host.c_str());
             snprintf(jump_to, sizeof(jump_to) - 1, "https://%s", request._host.c_str());
-            response->_header_size = response->redirect_to(302, jump_to);
+            response->_header_size = response->redirect_to(302, jump_to, false);
         }
         else {
             //printf("Rights: %d Cookie found: %d\n", action->get_rights(), cookie_found);

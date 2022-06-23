@@ -5,13 +5,13 @@ echo '<html><head>'
 echo '<meta charset="utf-8">'
 echo '<title>Simple example shell CGI</title>'
 echo '</meta></head>'
-echo '<body><h1>Вывод nohup.out:</h1><br/>'
+echo '<body><h1>Вывод nohup.out:</h1><br/><pre>'
 
 tail -n 1000 nohup.out | while read line
 do
-   echo " $line<br/>"
+   echo " $line"
 done
-echo '<br/>'
+echo '</pre><br/>'
 echo '<a href="/">Вернуться назад</a><br/><br/>'
 echo "UID: `whoami`"
 echo '</body>'

@@ -66,7 +66,7 @@ public:
 
     void add_cookie(const char * name, const char *value, unsigned int seconds = 0);
     int prepare_header(char * header, int code, int body_size);
-    int redirect_to(int code, const char * url);
+    int redirect_to(int code, const char * url, bool keep_alive);
     void clear();
     void release();
 
