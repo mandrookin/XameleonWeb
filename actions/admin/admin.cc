@@ -125,7 +125,7 @@ namespace xameleon {
         }
         else
         {
-            fprintf(stderr, "Unable temporary file\n");
+            perror("Unable create temporary file\n");
         }
 
         return data;
