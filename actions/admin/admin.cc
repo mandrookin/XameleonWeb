@@ -64,7 +64,7 @@ namespace xameleon {
         struct sysinfo      info;
         char* data = nullptr;
 
-        FILE* fp_html = fopen("/tmp/debug_https_ip.html", "r+t");
+        FILE* fp_html = fopen("/tmp/debug_https_ip.html", "w+t");
         if (fp_html) 
         {
             int status = sysinfo(&info);
