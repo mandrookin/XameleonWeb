@@ -7,25 +7,27 @@
 #include "../action.h"
 #include "../lib.h"
 
-void prepare_file(
-    https_session_t     *   session,
-    url_t               *   url)
+using namespace xameleon;
+
+void xameleon::prepare_file(
+    https_session_t* session,
+    url_t* url)
 {
-    http_request_t      *   request = &session->request;
-    http_response_t     *   response = &session->response_holder;
+    http_request_t* request = &session->request;
+    http_response_t* response = &session->response_holder;
     char  filename[512];
 
-    if(strcmp(url->path, "/") != 0)
+    if (strcmp(url->path, "/") != 0)
         snprintf(filename, 512, "%s%s", session->get_html_root(), url->path);
     else
-        snprintf(filename, 512, "%sindex.html", session->get_html_root() );
+        snprintf(filename, 512, "%sindex.html", session->get_html_root());
 
     response->_code = 200;
     response->_body = alloc_file(filename, &response->_body_size);
 
-    #if false
+#if false
     printf("Filename %s\n", filename);
-    char * last = strchr(url->rest, '.');
+    char* last = strchr(url->rest, '.');
 #else
     char* last = strchr(filename, '.');
 #endif
@@ -67,11 +69,11 @@ void prepare_file(
     }
 }
 
-http_response_t * static_page_action::process_req(
-    https_session_t     *   session, 
-    url_t               *   url)
+http_response_t* static_page_action::process_req(
+    https_session_t* session,
+    url_t* url)
 {
-    http_response_t     *   response = &session->response_holder;
+    http_response_t* response = &session->response_holder;
 
     if (url->path[0] == '/' && url->path[1] == 0) {
         strcpy(url->path, "/index.html");
@@ -85,11 +87,11 @@ http_response_t * static_page_action::process_req(
     return response;
 }
 
-http_response_t * get_favicon_action::process_req(
-    https_session_t     * session, 
-    url_t               * url) 
+http_response_t* get_favicon_action::process_req(
+    https_session_t* session,
+    url_t* url)
 {
-    http_response_t     *   response = &session->response_holder;
+    http_response_t* response = &session->response_holder;
     url->rest = url->path + 1;
     printf("ACTION: GET favicon.ico [%s <- %s]\n", url->path, url->rest);
     prepare_file(session, url);
@@ -101,9 +103,9 @@ http_response_t * get_favicon_action::process_req(
 }
 
 
-http_response_t * get_touch_action::process_req(https_session_t * session, url_t * url)
+http_response_t* get_touch_action::process_req(https_session_t* session, url_t* url)
 {
-    http_response_t     *   response = &session->response_holder;
+    http_response_t* response = &session->response_holder;
     bool found = false;
 
     response->_code = 200;
@@ -112,7 +114,7 @@ http_response_t * get_touch_action::process_req(https_session_t * session, url_t
     std::string id = url->rest;
     for (int i = 0; i < url->query_count; i++) {
         printf("  '%s': %s\n", url->query[i].key, url->query[i].val);
-        if (strcmp(url->query[i].key,"url") == 0) {
+        if (strcmp(url->query[i].key, "url") == 0) {
             strcpy(url->path, url->query[i].val);
             // Здесь пока поломано.
             response->add_cookie("lid", id.c_str(), 31536000);
@@ -128,4 +130,5 @@ http_response_t * get_touch_action::process_req(https_session_t * session, url_t
 
     return response;
 }
+
 

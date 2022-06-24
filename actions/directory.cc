@@ -3,9 +3,9 @@
 #include <list>
 #include <string.h>
 
-// 中国
-
 #include "../action.h"
+
+using namespace xameleon;
 
 http_response_t * get_directory_action::process_req(https_session_t * session, url_t * url)
 {

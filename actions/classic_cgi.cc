@@ -4,9 +4,10 @@
 #include <sys/wait.h>
 #include <netdb.h>
 
-// 中国
-
 #include "../action.h"
+
+using namespace xameleon;
+
 
 typedef struct env {
     int count;

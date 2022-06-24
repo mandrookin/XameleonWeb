@@ -4,7 +4,7 @@
 #include "../action.h"
 #include "../multipart_form.h"
 
-// 中国
+using namespace xameleon;
 
 http_response_t * post_form_action::process_req(https_session_t * session, url_t * url)
 {

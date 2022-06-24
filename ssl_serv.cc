@@ -19,13 +19,11 @@
 #define HTTP_ONLY       false
 #define SERVER_PORT     4433
 
-static volatile bool        keepRunning = true;
-static transport_i      *   transport;
-static transport_i      *   redirector_transport = nullptr;
-static session_mgr_t        session_cache;
-static const char       *   webpages = "pages/";
-static int                  server_port = SERVER_PORT;
-
+static volatile bool                keepRunning = true;
+static transport_i              *   transport;
+static transport_i              *   redirector_transport = nullptr;
+static const char               *   webpages = "pages/";
+static int                          server_port = SERVER_PORT;
 
 extern transport_t* create_http_transport();
 #if HTTP_ONLY
@@ -34,21 +32,16 @@ extern SSL_CTX* create_context();
 extern transport_t* create_https_transport(SSL_CTX* ctx);
 #endif
 
-session_mgr_t* get_active_sessions()
-{
-    return &session_cache;
-}
-
 void *thread_func(void *data)
 {
     char client_name[64];
-    https_session_t* client = (https_session_t*)data;
+    xameleon::https_session_t* client = (xameleon::https_session_t*)data;
     client->get_transport()->describe(client_name, sizeof(client_name));
     printf("Client '%s' thread started\n", client_name);
-    session_cache.add_session(client);
+    xameleon::get_active_sessions()->add_session(client);
     pthread_detach(pthread_self());
     client->https_session();
-    session_cache.remove_session(client);
+    xameleon::get_active_sessions()->remove_session(client);
     delete client;
     printf("Client '%s' thread exit\n", client_name);
     pthread_exit(NULL);
@@ -138,7 +131,7 @@ void* redirector_thread(void* data)
     redirector_transport = create_http_transport();;
     redirector_transport->bind_and_listen(80);
     redirector_transport->describe(client_name, sizeof(client_name));
-    printf("Redirector thread will accept incoming connections on '%s'\n", client_name);
+    printf("Redirector thread readdy to accept incoming connections on '%s'\n", client_name);
 
     while (keepRunning) {
         transport_i* client_transport = nullptr;
@@ -151,7 +144,7 @@ void* redirector_thread(void* data)
                 puts("\033[36m\nServer stopped by TERM signal\033[0m\n");
             continue;
         }
-        https_session_t* client = new https_session_t(client_transport, webpages);
+        xameleon::https_session_t* client = new xameleon::https_session_t(client_transport, webpages);
         client->https_session();
         delete client;
         delete client_transport;
@@ -210,6 +203,8 @@ void drop_privileges()
 
 int main(int argc, char **argv)
 {
+    using namespace xameleon;
+
     pthread_t       handle;
 
     set_segfault_handler();
@@ -224,7 +219,7 @@ int main(int argc, char **argv)
 #endif
     transport->bind_and_listen(server_port);
 
-    http_action_t* static_page = new static_page_action(guest);
+    xameleon::http_action_t* static_page = new xameleon::static_page_action(guest);
     add_action_route("/", GET, static_page);
     add_action_route("/", POST, new post_form_action(tracked));
     add_action_route("/favicon.ico", GET, new get_favicon_action);
