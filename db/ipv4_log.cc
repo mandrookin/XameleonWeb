@@ -85,6 +85,7 @@ namespace xameleon {
         switch (ret) {
         case 0:
             record = (ipv4_record_t*) data.data;
+            value->first_seen = record->first_seen;
             value->counters.total_request += record->counters.total_request;
             value->counters.bad_request += record->counters.bad_request;
             value->counters.not_found += record->counters.not_found;

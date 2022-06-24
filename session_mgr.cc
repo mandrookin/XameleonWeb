@@ -102,6 +102,7 @@ namespace xameleon
                 http_session_counters_t counter = session->get_counters();
                 ipv4_record_t record;
                 record.ip = ip;
+                record.first_seen = 0;
                 record.last_seen = time(nullptr);
                 record.counters = counter;
                 log->update_database(&record);

@@ -17,6 +17,24 @@ namespace xameleon {
 
     extern session_mgr_t* get_active_sessions();
 
+    static const char* admin_style =
+        "<style>"
+            "table, td {"
+                "border: 1px solid black;"
+                "background-color: white;"
+                "border-spacing: 0;"
+                "border-collapse: collapse;"
+                "text-align: center;"
+                "vertical-align: middle;"
+            "}"
+            "th {"
+                "border: 1px solid black;"
+                "background-color: rgb(240, 240, 240);"
+                "border-spacing: 0;"
+                "border-collapse: collapse;"
+            "}"
+        "</style>";
+
     static int ip_list_callback(void* obj, ipv4_record_t* ipv4)
     {
         FILE* f = (FILE *) obj;
@@ -75,25 +93,10 @@ namespace xameleon {
                 print_uptime(service_period, xameleon::uptime());
                 fprintf(fp_html, 
                     "<html lang='utf8'>"
-                    "<style>"
-                    "table, td {"
-                        "border: 1px solid black;"
-                        "background-color: white;"
-                        "border-spacing: 0;"
-                        "border-collapse: collapse;"
-                        "text-align: center;"
-                        "vertical-align: middle;"                    
-                    "}"
-                    "th {"
-                        "border: 1px solid black;"
-                        "background-color: rgb(240, 240, 240);"
-                        "border-spacing: 0;"
-                        "border-collapse: collapse;"
-                    "}"
-                    "</style>"
+                    "%s"
                     "<body>"
                     "<p>System uptime: %s<br/>HTTPS service uptime: %s<br/></p>",
-                    server_period, service_period);
+                    admin_style, server_period, service_period);
             }
 
             xameleon::ipv4_log* ip_db = get_ip_database();
@@ -135,9 +138,12 @@ namespace xameleon {
     {
         std::stringstream my_ss(std::stringstream::out);
 
-        my_ss <<
+        my_ss << 
+            "<html lang='utf8'>"
+            << admin_style <<
+            "<body>"
             "<table align='left' width: 100%; style='padding-right: 15px; margin-right: 20px; '>"
-            "<tr align='left'>"
+            "<tr>"
             "<th style='width: 30%;'>Remote</th>"
             "<th style='width: 40%;'>ID</th>"
             "<th style='width: 30%;'>Time</th>"
@@ -159,7 +165,10 @@ namespace xameleon {
                     "</tr>";
             }
         }
-        my_ss << "</table>";
+        my_ss << 
+            "</table>"
+            "</body>"
+            "</html>";
 
         *response_size = my_ss.str().size();
         char* p = new char[*response_size + 1];
