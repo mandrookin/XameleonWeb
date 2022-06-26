@@ -35,20 +35,27 @@ namespace xameleon {
             "}"
         "</style>";
 
+    typedef struct ip_context {
+        FILE    *   fp;
+        int         counter;
+        ip_context() : fp(0), counter(0) {}
+    } ip_context_t;
+
     static int ip_list_callback(void* obj, ipv4_record_t* ipv4)
     {
-        FILE* f = (FILE *) obj;
+        ip_context_t * context = (ip_context_t*) obj;
         char first[20], last[20],buf[128];
         ipv4_log::sprint_ip(buf, ipv4->ip);
         strftime(first, 20, "%Y-%m-%d %H:%M:%S", localtime(&ipv4->first_seen));
         strftime(last, 20, "%Y-%m-%d %H:%M:%S", localtime(&ipv4->last_seen));
 
-        fprintf(f, "<tr><td>%s</td><td>%s</td><td>%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>\n", 
+        fprintf(context->fp, "<tr><td>%s</td><td>%s</td><td>%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>\n",
             buf, first, last, 
             ipv4->counters.total_request,
             ipv4->counters.bad_request,
             ipv4->counters.not_found,
             ipv4->counters.http2https);
+        context->counter++;
         return 0;
     }
 
@@ -75,15 +82,37 @@ namespace xameleon {
         return sz;
     }
 
-    // Надо бы больше диагностики сюда добавить.
+    
+    static char* const do_references(http_request_t* request, int* response_size)
+    {
+        FILE * fp_html = fopen("/tmp/debug_refernces.html", "w+t");
+        fputs("Under construction<br/>", fp_html);
+
+        fflush(fp_html);
+        int sz = (int)ftell(fp_html);
+        fseek(fp_html, 0, SEEK_SET);
+        char * data = new char[sz];
+        if (fread(data, 1, sz, fp_html) != (size_t)sz) {
+            fprintf(fp_html, "read references error\n");
+        }
+        *response_size = sz; 
+        fclose(fp_html);
+        return data;
+    }
+
     static char* const do_list_ipv4(http_request_t* request, int* response_size)
     {
         int sz = 0;
         struct sysinfo      info;
         char* data = nullptr;
-
-        FILE* fp_html = fopen("/tmp/debug_https_ip.html", "w+t");
-        if (fp_html) 
+        ip_context_t context;
+        //FILE* fp_html;
+#if DEBUG_ONLY
+        context.fp = fopen("/tmp/debug_https_ip.html", "w+t");
+#else
+        context.fp = tmpfile();
+#endif
+        if (context.fp)
         {
             int status = sysinfo(&info);
             if (status == 0) {
@@ -91,7 +120,7 @@ namespace xameleon {
                 char  service_period[128];
                 print_uptime(server_period, info.uptime);
                 print_uptime(service_period, xameleon::uptime());
-                fprintf(fp_html, 
+                fprintf(context.fp,
                     "<html lang='utf8'>"
                     "%s"
                     "<body>"
@@ -99,32 +128,33 @@ namespace xameleon {
                     admin_style, server_period, service_period);
             }
 
-            xameleon::ipv4_log* ip_db = get_ip_database();
+            ipv4_log* ip_db = get_ip_database();
             if (ip_db) {
-                fprintf(fp_html, 
-                    "<h3>Статистика IP адресов с момента старта сервера</h3><br/>"
+                fprintf(context.fp,
+                    "<h3>Статистика IP адресов с момента старта сервера</h3><br/>\n"
                     "<table><tr>"
-                        "<th style='width: 160px'>IP</th>"
-                        "<th style='width: 160px'>First seen</th>"
-                        "<th style='width: 160px'>Last seen</th>"
+                        "<th style='width: 160px'>IP адрес</th>"
+                        "<th style='width: 160px'>Первый визит</th>"
+                        "<th style='width: 160px'>Предыдущий визит</th>"
                         "<th style='width: 80px'>Total</th>"
                         "<th style='width: 80px'>Bad</th>"
                         "<th style='width: 80px'>Not found</th>"
                         "<th style='width: 80px'>Redirect</th>"
                     "</tr>");
-                ip_db->list(0, 100, ip_list_callback, fp_html);
-                fprintf(fp_html, "</table>");
+                ip_db->list(0, 100, ip_list_callback, &context);
+                fprintf(context.fp, "</table><br/>Всего %d адресов<br/><br/>", context.counter);
             }
-            fprintf(fp_html, "</body></html>");
+            fprintf(context.fp, "</body></html>");
+            fflush(context.fp);
 
-            sz = (int) ftell(fp_html);
+            sz = (int) ftell(context.fp);
             data = new char[sz];
-            fflush(fp_html);
-            fseek(fp_html, 0, SEEK_SET);
-            if(fread(data, 1, sz, fp_html) != (size_t) sz)
-                fprintf(stderr, "IPlist read error\n");
-            *response_size = sz; // snprintf(list, 512, "Not ready yet\n");
-            fclose(fp_html);
+            fseek(context.fp, 0, SEEK_SET);
+            if (fread(data, 1, sz, context.fp) != (size_t)sz) {
+                fprintf(context.fp, "IPlist read error\n");
+            }
+            *response_size = sz;
+            fclose(context.fp);
         }
         else
         {
@@ -138,11 +168,11 @@ namespace xameleon {
     {
         std::stringstream my_ss(std::stringstream::out);
 
-        my_ss << 
+        my_ss <<
             "<html lang='utf8'>"
-            << admin_style <<
+            << admin_style << std::endl <<
             "<body>"
-            "<table align='left' width: 100%; style='padding-right: 15px; margin-right: 20px; '>"
+            "<table align='left' width: 100%; style='padding-right: 15px; margin-right: 10px; '>"
             "<tr>"
             "<th style='width: 30%;'>Remote</th>"
             "<th style='width: 40%;'>ID</th>"
@@ -157,7 +187,6 @@ namespace xameleon {
                 char session_start[20];
                 strftime(session_start, 20, "%Y-%m-%d %H:%M:%S", localtime(&session.second->start_time));
                 my_ss <<
-                    // str << "  <- " << request->_cookies["lid"] << "<-" << request->_cache_control << "<br>\n";
                     "<tr>"
                     "<td style='width: 30%; '>" << str << "</td>"
                     "<td style='width: 40%; '><span id='lid'>" << request->_cookies["lid"] << "</span></td>"
@@ -210,6 +239,9 @@ namespace xameleon {
             break;
         case hash("peers"):
             response->_body = do_list_ipv4(request, &response->_body_size);
+            break;
+        case hash("references"):
+            response->_body = do_references(request, &response->_body_size);
             break;
         case hash("admin_header.html"):
             response->_body = alloc_file("pages/admin/admin_header.html", &response->_body_size);

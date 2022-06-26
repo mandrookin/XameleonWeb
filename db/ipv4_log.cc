@@ -14,10 +14,87 @@ namespace xameleon {
 
     ipv4_log::ipv4_log()
     {
+        int ret;
+        u_int32_t open_flags;
+
+        /* Create the environment */
+        ret = db_env_create(&envp, 0);
+        if (ret != 0) {
+            fprintf(stderr, "Error creating environment handle: %s\n",
+                db_strerror(ret));
+            goto err;
+        }
+
+        open_flags =
+            DB_CREATE |  /* Create the environment if it does not exist */
+            DB_INIT_LOCK |  /* Initialize the locking subsystem */
+            DB_INIT_LOG |  /* Initialize the logging subsystem */
+            DB_INIT_MPOOL |  /* Initialize the memory pool (in-memory cache) */
+            DB_INIT_TXN |
+            DB_PRIVATE;      /* Region files are not backed by the filesystem.
+                              * Instead, they are backed by heap memory.  */
+
+                              /* Specify in-memory logging */
+        ret = envp->log_set_config(envp, DB_LOG_IN_MEMORY, 1);
+        if (ret != 0) {
+            fprintf(stderr, "Error setting log subsystem to in-memory: %s\n",
+                db_strerror(ret));
+            goto err;
+        }
+        /*
+         * Specify the size of the in-memory log buffer.
+         */
+        ret = envp->set_lg_bsize(envp, 10 * 1024 * 1024);
+        if (ret != 0) {
+            fprintf(stderr, "Error increasing the log buffer size: %s\n",
+                db_strerror(ret));
+            goto err;
+        }
+
+        /*
+         * Specify the size of the in-memory cache.
+         */
+        ret = envp->set_cachesize(envp, 0, 10 * 1024 * 1024, 1);
+        if (ret != 0) {
+            fprintf(stderr, "Error increasing the cache size: %s\n",
+                db_strerror(ret));
+            goto err;
+        }
+
+        /*
+         * Now actually open the environment. Notice that the environment home
+         * directory is NULL. This is required for an in-memory only
+         * application.
+         */
+        ret = envp->open(envp, NULL, open_flags, 0);
+        if (ret != 0) {
+            fprintf(stderr, "Error opening environment: %s\n",
+                db_strerror(ret));
+            goto err;
+        }
+
+    err:
+        /* Close our database handle, if it was opened. */
+        if (dbp != NULL) {
+            int ret_t = dbp->close(dbp, 0);
+            if (ret_t != 0) {
+                fprintf(stderr, "%s database close failed.\n",
+                    db_strerror(ret_t));
+            }
+        }
     }
 
     ipv4_log::~ipv4_log()
     {
+        int ret = 0;
+        /* Close our environment, if it was opened. */
+        if (envp != NULL) {
+            ret = envp->close(envp, 0);
+            if (ret != 0) {
+                fprintf(stderr, "environment close failed: %s\n",
+                    db_strerror(ret));
+            }
+        }
     }
 
     int ipv4_log::list(int from, int count, ip_list_callback_t cb, void * obj)
@@ -187,63 +264,6 @@ namespace xameleon {
         const char* db_name = "in_mem_ipv4";
         u_int32_t open_flags;
 
-        /* Create the environment */
-        ret = db_env_create(&envp, 0);
-        if (ret != 0) {
-            fprintf(stderr, "Error creating environment handle: %s\n",
-                db_strerror(ret));
-            goto err;
-        }
-
-        open_flags =
-            DB_CREATE |  /* Create the environment if it does not exist */
-            DB_INIT_LOCK |  /* Initialize the locking subsystem */
-            DB_INIT_LOG |  /* Initialize the logging subsystem */
-            DB_INIT_MPOOL |  /* Initialize the memory pool (in-memory cache) */
-            DB_INIT_TXN |
-            DB_PRIVATE;      /* Region files are not backed by the filesystem.
-                              * Instead, they are backed by heap memory.  */
-
-                              /* Specify in-memory logging */
-        ret = envp->log_set_config(envp, DB_LOG_IN_MEMORY, 1);
-        if (ret != 0) {
-            fprintf(stderr, "Error setting log subsystem to in-memory: %s\n",
-                db_strerror(ret));
-            goto err;
-        }
-        /*
-         * Specify the size of the in-memory log buffer.
-         */
-        ret = envp->set_lg_bsize(envp, 10 * 1024 * 1024);
-        if (ret != 0) {
-            fprintf(stderr, "Error increasing the log buffer size: %s\n",
-                db_strerror(ret));
-            goto err;
-        }
-
-        /*
-         * Specify the size of the in-memory cache.
-         */
-        ret = envp->set_cachesize(envp, 0, 10 * 1024 * 1024, 1);
-        if (ret != 0) {
-            fprintf(stderr, "Error increasing the cache size: %s\n",
-                db_strerror(ret));
-            goto err;
-        }
-
-        /*
-         * Now actually open the environment. Notice that the environment home
-         * directory is NULL. This is required for an in-memory only
-         * application.
-         */
-        ret = envp->open(envp, NULL, open_flags, 0);
-        if (ret != 0) {
-            fprintf(stderr, "Error opening environment: %s\n",
-                db_strerror(ret));
-            goto err;
-        }
-
-
         /* Initialize the DB handle */
         ret = db_create(&dbp, envp, 0);
         if (ret != 0) {
@@ -296,18 +316,17 @@ namespace xameleon {
 
     ipv4_log* get_ip_database()
     {
-        static xameleon::ipv4_log   log;
+        static ipv4_log   log;
         return &log;
     }
     int ipv4_log::release_ip_database()
     {
         int ret = 0;
-        /* Close our environment, if it was opened. */
-        if (envp != NULL) {
-            ret = envp->close(envp, 0);
-            if (ret != 0) {
-                fprintf(stderr, "environment close failed: %s\n",
-                    db_strerror(ret));
+        if (dbp != NULL) {
+            int ret_t = dbp->close(dbp, 0);
+            if (ret_t != 0) {
+                fprintf(stderr, "%s database close failed.\n",
+                    db_strerror(ret_t));
             }
         }
         return ret;

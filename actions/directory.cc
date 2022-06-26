@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "../action.h"
+#include "../lib/utf8_len.h"
 
 using namespace xameleon;
 
@@ -63,14 +64,15 @@ http_response_t * get_directory_action::process_req(https_session_t * session, u
                 strcpy(name, "-fifo-");
                 break;
             }
-            printf("%-40s %6s\n", item.c_str(), name);
+            int tab = 40 - count_utf8_code_points(item.c_str());
+            // printf("%s %*c %8s\n", item.c_str(), tab, '\0', name);
             if (response->_body_size < 31 * 1024) { 
-                response->_body_size += snprintf(response->_body + response->_body_size, 1024, "%-40s %6s\n", item.c_str(), name);
+                response->_body_size += snprintf(response->_body + response->_body_size, 1024, "%s %*c %9s\n", item.c_str(), tab, ' ', name);
             }
 
         }
         closedir(d);
-        response->content_type = "text/plain";
+        response->content_type = "text/plain; charset=utf-8";
         response->_header_size = response->prepare_header(response->_header, 200, response->_body_size);
 
     } while (false);

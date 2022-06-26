@@ -10,7 +10,7 @@
         return (char)(i > 9 ? 'a' + i - 9 : '0' + i);
     }
 
-    void generate_uuid_v4(char * guid) 
+    void generate_uuid_v4(char * guid)
     {
         int i,j=0;
 
