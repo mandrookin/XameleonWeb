@@ -265,10 +265,16 @@ namespace xameleon {
             *delim = '\0';
             delim += 2;
 
+            for (char* i = line; *i != 0; i++)
+#if 0
+                *i &= 0b11011111;
+#else
+                * i |= 0b00100000;
+#endif
             char* pcolon;
             switch (hash(line))
             {
-            case hash("Host"):
+            case hash("host"):
                 pcolon = strchr(delim, ':');
                 if (pcolon) {
                     *pcolon++ = '\0';
@@ -276,42 +282,46 @@ namespace xameleon {
                 }
                 _host = delim;
                 break;
-            case hash("Connection"):
+            case hash("connection"):
                 break;
-            case hash("Referer"):
+            case hash("x-forwarded-for"):
+                break;
+            case hash("x-real-ip"):
+                break;
+            case hash("referer"):
                 _referer = delim;
                 printf("Referer: %s\n", delim);
                 break;
-            case hash("Cache-Control"):
+            case hash("cache-control"):
                 parse_cache_control(delim);
                 break;
-            case hash("Cookie"):
+            case hash("cookie"):
                 parse_cookies(delim);
                 break;
-            case hash("User-Agent"):
+            case hash("user-agent"):
                 break;
-            case hash("Accept"):
+            case hash("accept"):
                 break;
-            case hash("Accept-Encoding"):
+            case hash("accept-encoding"):
                 parse_encoding(delim);
                 //            printf("Encoding code: 0x%02x\n", encoding);
                 break;
-            case hash("Accept-Language"):
+            case hash("accept-language"):
                 break;
-            case hash("If-None-Match"):
+            case hash("if-none-match"):
                 break;
-            case hash("Upgrade-Insecure-Requests"):
+            case hash("upgrade-insecure-requests"):
                 break;
-            case hash("Range"):
+            case hash("range"):
                 parse_range(delim);
                 break;
-            case hash("Sec-Fetch-Site"):
+            case hash("sec-fetch-site"):
                 break;
-            case hash("Sec-Fetch-Mode"):
+            case hash("sec-fetch-mode"):
                 break;
-            case hash("Sec-Fetch-User"):
+            case hash("sec-fetch-user"):
                 break;
-            case hash("Sec-Fetch-Dest"):
+            case hash("sec-fetch-dest"):
                 break;
             case hash("sec-ch-ua"):
                 break;
@@ -320,13 +330,13 @@ namespace xameleon {
             case hash("sec-ch-ua-platform"):
                 break;
                 // Found these values on HTTP PUT request
-            case hash("Content-Length"):
+            case hash("content-Length"):
                 _content_lenght = std::atoi(delim);
                 printf("\033[36mContent-lenght: %d\033[0m\n", _content_lenght);
                 break;
-            case hash("Origin"):
+            case hash("origin"):
                 break;
-            case hash("Content-Type"):
+            case hash("content-type"):
                 _content_type = delim;
                 break;
 

@@ -5,9 +5,13 @@
 #if 0
 #define CERTIFICATE_PUBLIC     "cert/debug.com.cer"
 #define CERTIFICATE_PRIVATE     "cert/debug.com.key"
-#else
+#elif 1
 #define CERTIFICATE_PUBLIC     "cert/cert.pem"
 #define CERTIFICATE_PRIVATE     "cert/key.pem"
+#else
+#define CERTIFICATE_PUBLIC     "/etc/letsencrypt/live/l4os.ru/fullchain.pem"
+#define CERTIFICATE_PRIVATE    "/etc/letsencrypt/live/l4os.ru/privkey.pem"
+
 #endif
 
 void configure_context(SSL_CTX *ctx)
