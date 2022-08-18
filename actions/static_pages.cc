@@ -66,6 +66,7 @@ void xameleon::prepare_file(
     if (response->_body == nullptr) {
         response->content_type = "text/html; charset=utf-8";
         session->page_not_found(GET, url->path, request->_referer.c_str());
+        session->counters.not_found++;
     }
 }
 

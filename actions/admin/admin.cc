@@ -43,12 +43,14 @@ namespace xameleon {
         strftime(first, 20, "%Y-%m-%d %H:%M:%S", localtime(&ipv4->first_seen));
         strftime(last, 20, "%Y-%m-%d %H:%M:%S", localtime(&ipv4->last_seen));
 
-        fprintf(f, "<tr><td>%s</td><td>%s</td><td>%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>\n", 
+        fprintf(f, "<tr><td>%s</td><td>%s</td><td>%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr>\n", 
             buf, first, last, 
             ipv4->counters.total_request,
             ipv4->counters.bad_request,
             ipv4->counters.not_found,
-            ipv4->counters.http2https);
+            ipv4->counters.http2https,
+            ipv4->counters.x_forward_counters,
+            ipv4->counters.x_realip_counters);
         return 0;
     }
 
@@ -111,6 +113,8 @@ namespace xameleon {
                         "<th style='width: 80px'>Bad</th>"
                         "<th style='width: 80px'>Not found</th>"
                         "<th style='width: 80px'>Redirect</th>"
+                        "<th style='width: 80px'>X-Forward</th>"
+                        "<th style='width: 80px'>X-Real</th>"
                     "</tr>");
                 ip_db->list(0, 100, ip_list_callback, fp_html);
                 fprintf(fp_html, "</table>");

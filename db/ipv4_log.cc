@@ -68,7 +68,54 @@ namespace xameleon {
             ip & 0xff, (ip >> 8) & 0xff, (ip >> 16) & 0xff, (ip >> 24) & 0xff);
     }
 
-    int ipv4_log::update_database(ipv4_record_t* value)
+    void dump_record(DBT rec, char * str)
+    {
+        printf("=========== %s ======>\n", str);
+        const char* p = (const char*)rec.data;
+        for (int i = 0; i < rec.size; i++) {
+            printf("%02x ", p[i]);
+        }
+        printf("\n");
+    }
+
+    int ipv4_log::load_record(int32_t ip, ipv4_record_t* record)
+    {
+        int ret;
+        DBT key, data;
+//        char ip32[32];
+
+        memset(&key, 0, sizeof(key));
+        memset(&data, 0, sizeof(data));
+        key.data = (void*)&ip;
+        key.size = sizeof(int32_t);
+        data.data = (void*)record;
+        data.size = sizeof(ipv4_record_t);
+        ret = dbp->get(dbp, NULL, &key, &data, 0);
+
+        switch (ret) {
+        case 0:
+        {
+            char first[20]; // , last[20];
+            strftime(first, 20, "%Y-%m-%d %H:%M:%S", localtime(&(record->first_seen)));
+            printf("First seen: %s\n", first);
+            dump_record(data, "READ");
+            memcpy(record, data.data, sizeof(ipv4_record_t));
+        }
+
+            break;
+
+        case DB_NOTFOUND:
+            break;
+
+        default:
+            printf("dbp->get(dbp, NULL, &key, &data, 0) = %d\n", ret);
+            dbp->err(dbp, ret, "DB->get");
+        }
+
+        return ret;
+    }
+
+    int ipv4_log::save_record(ipv4_record_t* value)
     {
         int ret;
         DBT key, data;
@@ -77,32 +124,33 @@ namespace xameleon {
         memset(&key, 0, sizeof(key));
         memset(&data, 0, sizeof(data));
         key.data = (void*)&value->ip;
-        key.size = sizeof(value->ip);
-        data.data = (void*)value;
-        data.size = sizeof(ipv4_record_t);
-        ipv4_record_t * record = nullptr;
-        ret = dbp->get(dbp, NULL, &key, &data, 0);
-        switch (ret) {
-        case 0:
-            record = (ipv4_record_t*) data.data;
-            value->first_seen = record->first_seen;
-            value->counters.total_request += record->counters.total_request;
-            value->counters.bad_request += record->counters.bad_request;
-            value->counters.not_found += record->counters.not_found;
-            value->counters.http2https += record->counters.http2https;
-            value->last_seen = time(NULL);
-            break;
-        case DB_NOTFOUND:
-            value->first_seen = time(NULL);
-            value->last_seen = time(NULL);
-            break;
-        default:
-            printf("dbp->get(dbp, NULL, &key, &data, 0) = %d\n", ret);
-            dbp->err(dbp, ret, "DB->get");
-        }
+        key.size = sizeof(uint32_t);
+        //data.data = (void*)value;
+        //data.size = sizeof(ipv4_record_t);
+        //ipv4_record_t * record = nullptr;
+        //ret = dbp->get(dbp, NULL, &key, &data, 0);
+        //switch (ret) {
+        //case 0:
+        //    record = (ipv4_record_t*) data.data;
+        //    value->first_seen = record->first_seen;
+        //    value->counters.total_request += record->counters.total_request;
+        //    value->counters.bad_request += record->counters.bad_request;
+        //    value->counters.not_found += record->counters.not_found;
+        //    value->counters.http2https += record->counters.http2https;
+        //    value->last_seen = time(NULL);
+        //    break;
+        //case DB_NOTFOUND:
+        //    value->first_seen = time(NULL);
+        //    value->last_seen = time(NULL);
+        //    break;
+        //default:
+        //    printf("dbp->get(dbp, NULL, &key, &data, 0) = %d\n", ret);
+        //    dbp->err(dbp, ret, "DB->get");
+        //}
 
         data.data = (void*)value;
         data.size = sizeof(ipv4_record_t);
+        dump_record(data, "WRITE");
         ret = dbp->put(dbp, NULL, &key, &data, 0);
         switch (ret) {
         case 0:
@@ -169,11 +217,11 @@ namespace xameleon {
         rec.counters.total_request = 1;
         rec.counters.not_found = 1;
 
-        update_database(&rec);
+        save_record(&rec);
         rec.ip = 3333;
-        update_database(&rec);
+        save_record(&rec);
         rec.ip = 773333;
-        update_database(&rec);
+        save_record(&rec);
         return 0;
     }
 

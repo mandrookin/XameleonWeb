@@ -84,7 +84,7 @@ namespace xameleon
                 break;
             }
             const struct sockaddr_in* const V4 = reinterpret_cast<const sockaddr_in* const>(addr);
-            unsigned long ip = V4->sin_addr.s_addr;
+            uint32_t ip = V4->sin_addr.s_addr;
             //ip4_map_t::iterator 
             if (active_sessions.count(ip) == 0) {
                 fprintf(stderr, "Unable remove session: IP adress not found\n");
@@ -98,16 +98,49 @@ namespace xameleon
             }
 
             https_session_t* session = (*ports)[pr]; // ports[ipV4->sin_port];
+            if(session != nullptr)
             {
                 http_session_counters_t counter = session->get_counters();
                 ipv4_record_t record;
-                record.ip = ip;
-                record.first_seen = 0;
-                record.last_seen = time(nullptr);
-                record.counters = counter;
-                log->update_database(&record);
-            }
 
+                int status = log->load_record(ip, &record);
+                if (status == DB_NOTFOUND) {
+                    record.ip = (int32_t) ip;
+                    record.first_seen = time(nullptr);
+                    record.last_seen = record.first_seen;
+                    record.counters = counter;
+                }
+                else if (status == 0) {
+                    printf("FOUND SESSION IP %08x == %08x\n", ip, record.ip );
+                    record.last_seen = time(nullptr);
+                    record.counters += counter;
+                }
+                log->save_record(&record);
+
+                if (session->request.x_forward_for != 0 || session->request.x_real_ip != 0)
+                {
+                    if (session->request.x_forward_for != session->request.x_real_ip)
+                        printf("Denug: x_forward_for = 0x%08x x_real_ip = 0x%08x\n", session->request.x_forward_for, session->request.x_real_ip);
+
+                    if (session->request.x_forward_for != 0)
+                    {
+                        int status = log->load_record(session->request.x_forward_for, &record);
+                        if (status == DB_NOTFOUND) {
+                            record.ip = (int32_t)session->request.x_forward_for;
+                            record.first_seen = time(nullptr);
+                            record.last_seen = record.first_seen;
+                            record.counters = counter;
+                        }
+                        else if (status == 0) {
+                            printf("FOUND FORWARD IP %08x == %08x\n", session->request.x_forward_for, record.ip);
+                            record.last_seen = time(nullptr);
+                            record.counters += counter;
+                        }
+                        log->save_record(&record);
+                    }
+                }
+            }
+                
             printf("Session found, ip database updated, it will removed form list of active sessions\n");
             ports->erase(pr);
             //        delete session;

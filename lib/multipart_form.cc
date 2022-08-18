@@ -321,7 +321,7 @@ int test_main()
 
 void show(form_data_t * form_data)
 {
-    printf("Show form data [%lu]:\n", form_data->_objects.size());
+    printf("Show form data [%lu]:\n", (long unsigned int) form_data->_objects.size());
     for (auto const& section : form_data->_objects) {
         switch (section->type)
         {

@@ -135,6 +135,8 @@ namespace xameleon {
         ranges_count = 0;
         encoding = plain;
         port = 0; // Использовать порт по умолчанию, если не задан
+        x_forward_for = 0;
+        x_real_ip = 0;
     }
 
     void http_request_t::parse_range(char* rangestr)
@@ -240,6 +242,24 @@ namespace xameleon {
         }
     }
 
+    uint32_t parseIPV4string(char* ipAddress) {
+#if CHECK_ENDIAN_LATER
+        char ipbytes[4];
+        sscanf(ipAddress, "%hhu.%hhu.%hhu.%hhu", &ipbytes[3], &ipbytes[2], &ipbytes[1], &ipbytes[0]);
+        //printf("%u.%u.%u.%u\n", ipbytes[3], ipbytes[2], ipbytes[1], ipbytes[0]);
+        return ipbytes[0] | ipbytes[1] << 8 | ipbytes[2] << 16 | ipbytes[3] << 24;
+#else
+        return inet_addr(ipAddress);
+#endif
+    }
+
+    void http_request_t::parse_forward_tag(char* ip_string)
+    {
+        x_forward_for = parseIPV4string(ip_string);
+        printf("x-forwarded-for: %s is %08x\n", ip_string, x_forward_for);
+
+    }
+
     char* http_request_t::parse_http_header(char* header)
     {
         body = nullptr;
@@ -266,11 +286,8 @@ namespace xameleon {
             delim += 2;
 
             for (char* i = line; *i != 0; i++)
-#if 0
-                *i &= 0b11011111;
-#else
                 * i |= 0b00100000;
-#endif
+
             char* pcolon;
             switch (hash(line))
             {
@@ -285,8 +302,12 @@ namespace xameleon {
             case hash("connection"):
                 break;
             case hash("x-forwarded-for"):
+                x_forward_for = parseIPV4string(delim);
+//                parse_forward_tag(delim);
                 break;
             case hash("x-real-ip"):
+                x_real_ip = parseIPV4string(delim);
+//                printf("x-real-ip: %s\n", delim);
                 break;
             case hash("referer"):
                 _referer = delim;
@@ -330,7 +351,7 @@ namespace xameleon {
             case hash("sec-ch-ua-platform"):
                 break;
                 // Found these values on HTTP PUT request
-            case hash("content-Length"):
+            case hash("content-length"):
                 _content_lenght = std::atoi(delim);
                 printf("\033[36mContent-lenght: %d\033[0m\n", _content_lenght);
                 break;
@@ -342,6 +363,7 @@ namespace xameleon {
 
             default:
                 printf("Unparsed HTTP tag: %s value: %s\n", line, delim);
+                printf("Compare hashes: %08x value: %08x\n", hash(line), hash("content-Length"));
                 break;
             }
             line = sterm + 2;
@@ -423,11 +445,17 @@ namespace xameleon {
             }
             cookie_found = request._cookies.count("lid") != 0;
 
+            if (request.x_forward_for != 0)
+                counters.x_forward_counters++;
+            if (request.x_real_ip != 0)
+                counters.x_realip_counters++;
+
             http_response_t* response = nullptr;
 
             http_action_t* action = find_http_action(url);
             if (!action) {
                 counters.not_found++;
+                printf("Not found counters = %d\n", counters.not_found);
                 response = page_not_found(url.method, url.path, request._referer.c_str());
                 if (request._content_lenght != 0) {
                     // Рвём соединение если нам пытаются залить какие-то данные, а их некуда лить. 
