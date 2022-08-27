@@ -54,10 +54,17 @@ void segfault_sigaction(int signal, siginfo_t *si, void *arg)
     exit(1);
 }
 
-void intHandler(int dummy) {
+void interrupt_sigaction(int signal, siginfo_t *si, void *arg)
+{
     keepRunning = false;
     transport->close();
+    if(si->si_code == SI_KERNEL)
+      fprintf(stderr, "Looks like Ctrl+C pressed\n");
+    else 
+      fprintf(stderr, "Signal %d from pid: %u uid: %u code: %d\n",
+        si->si_signo, si->si_pid, si->si_uid, si->si_code);
 }
+
 
 void set_segfault_handler()
 {
@@ -67,10 +74,13 @@ void set_segfault_handler()
     sigemptyset(&sa.sa_mask);
     sa.sa_sigaction = segfault_sigaction;
     sa.sa_flags = SA_SIGINFO;
-
     sigaction(SIGSEGV, &sa, NULL);
 
-    signal(SIGINT, intHandler);
+    memset(&sa, 0, sizeof(struct sigaction));
+    sigemptyset(&sa.sa_mask);
+    sa.sa_sigaction = interrupt_sigaction;
+    sa.sa_flags = SA_SIGINFO;
+    sigaction(SIGINT, &sa, NULL);
 }
 
 #include <ifaddrs.h>
