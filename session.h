@@ -36,6 +36,7 @@ namespace xameleon {
         void parse_range(char* ranges);
         void parse_cache_control(char* cache_control);
         void parse_encoding(char* enc);
+        void parse_forward_tag(char* ip_string);
         void prepare();
     public:
         std::map<std::string, std::string>  _cookies;
@@ -48,6 +49,8 @@ namespace xameleon {
         encoding_t  encoding;
         unsigned int ranges_count;
         range_t     ranges[max_range_count];
+        uint32_t x_forward_for;
+        uint32_t x_real_ip;
 
         char* parse_http_header(char* header);
         char* body;
@@ -85,9 +88,9 @@ namespace xameleon {
     class https_session_t {
         transport_i* transport;
         std::string                 homedir;
-        http_session_counters_t     counters;
     public:
         time_t              start_time;
+        http_session_counters_t     counters;
         bool                cookie_found;
         bool                session_found;
         http_request_t      request;

@@ -21,7 +21,8 @@ namespace xameleon {
     public:
         ipv4_log();
         ~ipv4_log();
-        int update_database(ipv4_record_t* value);
+        int load_record(int32_t ip, ipv4_record_t* value);
+        int save_record(ipv4_record_t* value);
         int list(int from, int count, ip_list_callback_t cb, void * obj);
         int show_database();
         int test();

@@ -41,7 +41,7 @@ http_response_t * cgi_action::process_req(https_session_t * session, url_t * url
     struct stat path_stat;
     const int BUFSIZE = 512;
     const int MAXRESPONSE = 64 * 1024;
-    FILE *fp;
+    FILE *fp = nullptr;
     char  executable[BUFSIZE];
     char  buff[BUFSIZE];
 
