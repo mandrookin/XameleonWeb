@@ -6,8 +6,9 @@
 
 using namespace xameleon;
 
-http_response_t * post_form_action::process_req(https_session_t * session, url_t * url)
+http_response_t * post_form_action::process_req(https_session_t * session)
 {
+    url_t               *   url = &session->request.url;
     http_request_t      *   request = &session->request;
     http_response_t     *   response = &session->response_holder;
     FILE                *   copy = nullptr;
@@ -37,11 +38,13 @@ http_response_t * post_form_action::process_req(https_session_t * session, url_t
     if (request->_content_type.rfind("multipart/form-data; boundary=", 0) == 0) {
         const char * bound = request->_content_type.c_str() + 30;
  //        printf("BOUNDARY: '%s'\n", bound);
-        std::string wider_bound = "\r\n--";
-        wider_bound += bound;
-        wider_bound += "\r\n";
+
+//        std::string wider_bound = "\r\n--";
+//        wider_bound += bound;
+//        wider_bound += "\r\n";
+        bool sync = false;
         form_data_t* data = new form_data_t(bound);
-        int status = parse_form_data(session->get_transport(), request->_content_lenght, wider_bound.c_str(), data);
+        int status = parse_form_data(session->get_multiart_reader(), data, sync);
         if (status < 0) {
             char    remote_transport[64];
             session->get_transport()->describe(remote_transport, sizeof(remote_transport));
@@ -60,7 +63,7 @@ http_response_t * post_form_action::process_req(https_session_t * session, url_t
 #if false // Not works between mounts
                 if (link(section->filename.c_str(), buff) < 0)
                     perror("Unable link file");
-#elif false // Not comptible with mktemp
+#elif false // Not compatible with mktemp
                 {
                     std::ifstream ifs(section->filename, std::ios::in | std::ios::binary);
                     ifs.seekg(0);
@@ -120,7 +123,7 @@ http_response_t * post_form_action::process_req(https_session_t * session, url_t
 #else
 
 
-    response->content_type = "text/html; charset=utf-8";
+    response->_content_type = "text/html; charset=utf-8";
     response->_body = new char[1024];
     response->_body_size = snprintf(response->_body, 1024,
         "<html><body>"

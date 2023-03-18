@@ -1,4 +1,7 @@
-﻿#include <unistd.h>
+﻿#define _CRT_SECURE_NO_WARNINGS 1
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 #include <fcntl.h>
 #include <cstring>
 
@@ -32,49 +35,48 @@ void xameleon::prepare_file(
     char* last = strchr(filename, '.');
 #endif
     if (last == nullptr)
-        response->content_type = "application/octet-stream";
+        response->_content_type = "application/octet-stream";
     else {
         last++;
         switch (hash(last))
         {
         case hash("html"):
-            response->content_type = "text/html; charset=utf-8";
+            response->_content_type = "text/html; charset=utf-8";
             break;
         case hash("svg"):
-            response->content_type = "image/svg+xml";
+            response->_content_type = "image/svg+xml";
             break;
         case hash("jpg"):
-            response->content_type = "image/jpg";
+            response->_content_type = "image/jpg";
             break;
         case hash("png"):
-            response->content_type = "image/img";
+            response->_content_type = "image/img";
             break;
         case hash("gif"):
-            response->content_type = "image/gif";
+            response->_content_type = "image/gif";
             break;
         case hash("bmp"):
-            response->content_type = "image/bmp";
+            response->_content_type = "image/bmp";
             break;
         case hash("xml"):
-            response->content_type = "application/xml";
+            response->_content_type = "application/xml";
             break;
         default:
-            response->content_type = "application/octet-stream";
+            response->_content_type = "application/octet-stream";
             break;
         }
     }
     if (response->_body == nullptr) {
-        response->content_type = "text/html; charset=utf-8";
+        response->_content_type = "text/html; charset=utf-8";
         session->page_not_found(GET, url->path, request->_referer.c_str());
         session->counters.not_found++;
     }
 }
 
-http_response_t* static_page_action::process_req(
-    https_session_t* session,
-    url_t* url)
+http_response_t* static_page_action::process_req(https_session_t* session)
 {
     http_response_t* response = &session->response_holder;
+    url_t* url = &session->request.url;
 
     if (url->path[0] == '/' && url->path[1] == 0) {
         strcpy(url->path, "/index.html");
@@ -88,25 +90,25 @@ http_response_t* static_page_action::process_req(
     return response;
 }
 
-http_response_t* get_favicon_action::process_req(
-    https_session_t* session,
-    url_t* url)
+http_response_t* get_favicon_action::process_req(https_session_t* session)
 {
     http_response_t* response = &session->response_holder;
+    url_t* url = &session->request.url;
     url->rest = url->path + 1;
-    printf("ACTION: GET favicon.ico [%s <- %s]\n", url->path, url->rest);
+//    printf("ACTION: GET favicon.ico [%s <- %s]\n", url->path, url->rest);
     prepare_file(session, url);
     response->etag = "favicon.ico";
     response->_max_age = 300000;
-    response->content_type = "image/x-icon";
+    response->_content_type = "image/x-icon";
     response->_header_size = response->prepare_header(response->_header, response->_code, response->_body_size);
     return response;
 }
 
 
-http_response_t* get_touch_action::process_req(https_session_t* session, url_t* url)
+http_response_t* get_touch_action::process_req(https_session_t* session)
 {
     http_response_t* response = &session->response_holder;
+    url_t* url = &session->request.url;
     bool found = false;
 
     response->_code = 200;

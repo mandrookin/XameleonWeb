@@ -4,8 +4,8 @@
 #include <vector>
 #include <sstream>
 
-#include "http.h"
-#include "action.h"
+#include "../http.h"
+#include "../action.h"
 
 namespace xameleon {
     class endpoint_t

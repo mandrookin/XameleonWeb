@@ -1,7 +1,18 @@
+#define _CRT_SECURE_NO_WARNINGS 1
 #include <sys/stat.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <fcntl.h>
+#ifndef _WIN32
+#include <unistd.h>
+#else
+#include <io.h>
+#if !defined(S_ISREG) && defined(S_IFMT) && defined(S_IFREG)
+#define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
+#define open _open
+#define read _read
+#define close _close
+#endif
+#endif
 
 char* alloc_file(const char* filename, int* size)
 {

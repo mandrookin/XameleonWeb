@@ -145,11 +145,11 @@ namespace xameleon {
             ip & 0xff, (ip >> 8) & 0xff, (ip >> 16) & 0xff, (ip >> 24) & 0xff);
     }
 
-    void dump_record(DBT rec, char * str)
+    void dump_record(DBT rec, const char * str)
     {
         printf("=========== %s ======>\n", str);
         const char* p = (const char*)rec.data;
-        for (int i = 0; i < rec.size; i++) {
+        for (u_int32_t i = 0; i < rec.size; i++) {
             printf("%02x ", p[i]);
         }
         printf("\n");
@@ -169,13 +169,15 @@ namespace xameleon {
         data.size = sizeof(ipv4_record_t);
         ret = dbp->get(dbp, NULL, &key, &data, 0);
 
+        char first[180];
+
         switch (ret) {
         case 0:
         {
-            char first[20]; // , last[20];
-            strftime(first, 20, "%Y-%m-%d %H:%M:%S", localtime(&(record->first_seen)));
+            //strcat(first, "Checkpoint");
+            strftime(first, sizeof(first), "%Y-%m-%d %H:%M:%S", localtime(&(record->first_seen)));
             printf("First seen: %s\n", first);
-            dump_record(data, "READ");
+            ///dump_record(data, "READ");
             memcpy(record, data.data, sizeof(ipv4_record_t));
         }
 
@@ -227,7 +229,7 @@ namespace xameleon {
 
         data.data = (void*)value;
         data.size = sizeof(ipv4_record_t);
-        dump_record(data, "WRITE");
+        //dump_record(data, "WRITE");
         ret = dbp->put(dbp, NULL, &key, &data, 0);
         switch (ret) {
         case 0:
@@ -266,9 +268,9 @@ namespace xameleon {
             //printf("%lu : %.*s\n",
             //    *(u_long*)key.data, (int)data.size, (char*)data.data);
             ipv4_record_t* value = (ipv4_record_t*)(data.data);
-            char first[20], last[20];
-            strftime(first, 20, "%Y-%m-%d %H:%M:%S", localtime(&value->first_seen));
-            strftime(last, 20, "%d.%m.%Y %H:%M:%S", localtime(&value->last_seen));
+            char first[80], last[80];
+            strftime(first, 80, "%Y-%m-%d %H:%M:%S", localtime(&value->first_seen));
+            strftime(last, 80, "%d.%m.%Y %H:%M:%S", localtime(&value->last_seen));
             char ip32[32];
             sprint_ip(ip32, value->ip);
             fprintf(stdout, "%04u: %-16s %s   %s   %u\n", idx, ip32, first, last, value->counters.total_request);

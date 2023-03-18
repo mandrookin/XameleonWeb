@@ -32,8 +32,9 @@ int env_t::setenv(const char* name, const char* value)
     return count;
 }
 
-http_response_t * cgi_action::process_req(https_session_t * session, url_t * url)
+http_response_t * cgi_action::process_req(https_session_t * session)
 {
+    url_t               *   url = &session->request.url;
     http_request_t      *   request = &session->request;
     http_response_t     *   response = &session->response_holder;
     env_t                   env;
@@ -147,10 +148,36 @@ http_response_t * cgi_action::process_req(https_session_t * session, url_t * url
                 perror("Unable fdopen write pipe. TODO: Check resoiurces leak here");
                 continue;
             }
-            int l = fwrite((const void*)request->body, 1, (size_t)request->_content_lenght, ofp);
-            if (l != request->_content_lenght) {
-                fprintf(stderr, "Sent broken response\n");
+
+//  printf("Request body %p content lenght %d\n", request->body, request->_content_lenght);
+  const char * p;
+  char *o = buff;
+  int fb = sizeof(buff);
+  int len = request->_content_lenght;
+  int count = 0;
+  bool sync;
+  int tmp_size;
+  multipart_stream_reader_t* reader = session->get_multiart_reader();
+  while(len>0) {
+    p = reader->get_pchar(sync, tmp_size);
+    if(sync) {
+      printf("CGI multipart not supported yet\n");
+      break;
+    }
+    *o++ = *p;
+    fb--;
+    len--;
+    count++;
+    if(fb == 0 || len == 0) {
+//buff[count] = 0;
+//printf("%6d: '%s'\n", count, buff);
+            int l = fwrite((const void*)buff, 1, (size_t)count, ofp);
+            if (l != count) {
+                fprintf(stderr, "Unable sent http to classic CGI script\n");
             }
+    } 
+  }
+
             fclose(ofp);
             wait(&status);
 //            printf("#### %d -> %d  STATUS: %d\n", request->_content_lenght, l, status);
@@ -174,7 +201,7 @@ http_response_t * cgi_action::process_req(https_session_t * session, url_t * url
             continue;
         }
 
-        response->content_type = "text/html; charset=utf-8";
+        response->_content_type = "text/html; charset=utf-8";
         response->_header_size = response->prepare_header(response->_header, response->_code, response->_body_size);
 
     } while (false);
