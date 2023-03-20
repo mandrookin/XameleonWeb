@@ -2,6 +2,11 @@
 #include <sstream>
 #include <sys/sysinfo.h>
 
+#ifndef _WIN32
+ #define O_BINARY 0
+ #include <sys/stat.h>
+ #include <fcntl.h>
+#endif
 
 #include "../../action.h"
 #include "../../lib.h"
@@ -205,11 +210,13 @@ namespace xameleon {
         return (char*)p;
     }
 
-    http_response_t* admin_action::process_req(https_session_t* session, url_t* url)
+    http_response_t* admin_action::process_req(https_session_t* session)
     {
-        http_request_t* request = &session->request;
-        http_response_t* response = &session->response_holder;
-        const char* req_name;
+        url_t           * url = &session->request.url;
+        http_request_t  * request = &session->request;
+        http_response_t * response = &session->response_holder;
+        const char      * req_name;
+
         switch (url->method) {
         case POST:
             req_name = "POST";
@@ -252,7 +259,7 @@ namespace xameleon {
         }
 
         response->_code = 200;
-        response->content_type = "text/html; charset=utf-8";
+        response->_content_type = "text/html; charset=utf-8";
         response->_header_size = response->prepare_header(response->_header, response->_code, response->_body_size);
 
         return response;

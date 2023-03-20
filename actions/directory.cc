@@ -8,8 +8,9 @@
 
 using namespace xameleon;
 
-http_response_t * get_directory_action::process_req(https_session_t * session, url_t * url)
+http_response_t * get_directory_action::process_req(https_session_t * session)
 {
+    url_t* url = &session->request.url;
     http_response_t     *   response = &session->response_holder;
     struct stat path_stat;
     DIR *d;
@@ -23,7 +24,7 @@ http_response_t * get_directory_action::process_req(https_session_t * session, u
         {
             strcpy(url->path, "/notexistpage.html");
             url->rest = url->path + 1;
-            prepare_file(session, url);
+            response_send_file(session);
             continue;
         }
 
@@ -72,7 +73,7 @@ http_response_t * get_directory_action::process_req(https_session_t * session, u
 
         }
         closedir(d);
-        response->content_type = "text/plain; charset=utf-8";
+        response->_content_type = "text/plain; charset=utf-8";
         response->_header_size = response->prepare_header(response->_header, 200, response->_body_size);
 
     } while (false);

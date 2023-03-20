@@ -11,6 +11,7 @@
 #include <pwd.h>
 #include <grp.h>
 
+#include "http.h"
 #include "transport.h"
 #include "session.h"
 #include "session_mgr.h"
@@ -18,6 +19,9 @@
 
 #define HTTP_ONLY       false
 #define SERVER_PORT     4433
+
+namespace xameleon
+{
 
 static volatile bool                keepRunning = true;
 static transport_i              *   transport;
@@ -211,7 +215,7 @@ void drop_privileges()
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     using namespace xameleon;
 
@@ -245,6 +249,16 @@ int main(int argc, char **argv)
     add_action_route("/admin", GET, admin);
     add_action_route("/admin/", GET, admin);
 
+    http_action_t* proxy = new proxy_action;
+    add_action_route("/proxy", GET, proxy);
+    add_action_route("/proxy/", GET, proxy);
+    add_action_route("/proxy", PUT, proxy);
+    add_action_route("/proxy/", PUT, proxy);
+    add_action_route("/proxy", POST, proxy);
+    add_action_route("/proxy/", POST, proxy);
+    add_action_route("/proxy", DEL, proxy);
+    add_action_route("/proxy/", DEL, proxy);
+
     show_registered_interfaces();
 
     drop_privileges();
@@ -276,4 +290,11 @@ int main(int argc, char **argv)
 #endif
 
     return 0;
+}
+
+}
+
+int main(int argc, char * argv[])
+{
+    return xameleon::main(argc, argv);
 }

@@ -4,8 +4,8 @@
 #include <vector>
 #include <sstream>
 
-#include "http.h"
-#include "action.h"
+#include "../http.h"
+#include "../action.h"
 
 namespace xameleon {
     class endpoint_t
@@ -140,7 +140,7 @@ namespace xameleon {
         segment.clear();
         url.rest = url.path + i;
 
-        int sz = chunks.size();
+        int sz = (int) chunks.size();
         for (i = 0; i < sz; i++) {
             segment = chunks[i];
             if (node->_child_points.count(segment) == 0) {

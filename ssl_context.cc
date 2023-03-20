@@ -14,6 +14,9 @@
 
 #endif
 
+namespace xameleon
+{
+
 void configure_context(SSL_CTX *ctx)
 {
 
@@ -56,3 +59,4 @@ SSL_CTX *create_context()
     return ctx;
 }
 
+}
