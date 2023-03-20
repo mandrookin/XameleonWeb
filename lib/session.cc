@@ -47,8 +47,10 @@ namespace xameleon {
     void http_response_t::release()
     {
         if (_body != nullptr) {
+//            printf("\n\n%s\n\n", _body);
             delete _body;
             _body = nullptr;
+//            printf("---\n");
         }
         _code = 200;
         _max_age = 0;
@@ -62,7 +64,7 @@ namespace xameleon {
     int http_response_t::add_cookies_to_header(char* buffer, int buffsz)
     {
         int size = 0;
-        int count = _cookies.size();
+        int count = (int) _cookies.size();
         if (count != 0) {
             for (auto const& cookie : _cookies) {
                 char tbuf[80];
@@ -124,11 +126,13 @@ namespace xameleon {
             "Server: Pressure/1.0.0 (POSIX)\r\n"
             "Connection: keep-alive\r\n"
             "Content-Type: %s\r\n"
-            "Accept-Ranges: bytes\r\n"
-            "Content-Length: %d\r\n";
+            "Accept-Ranges: bytes\r\n";
 
         int header_size = snprintf(header, 1024, format,
             code, tbuf, _content_type.c_str(), body_size);
+        if (body_size)
+            header_size += snprintf(header + header_size, 1024- header_size, 
+                "Content-Length: %d\r\n", body_size);
 
         if (!etag.empty())
         {
@@ -165,70 +169,45 @@ namespace xameleon {
         return &response_holder;
     }
 
-    void prepare_file(https_session_t* session, url_t* url);
-
-    void https_session_t::log(url_t& url, char* request_body)
+    void https_session_t::log(char* request_body)
     {
         ///            printf("\tPATH:%s\n\tREST:%s\n", url.path, url.rest);
-
         printf("%s %s\n\033[33m%s\033[0m\n",
-            url.method == POST ? "POST" :
-            url.method == GET ? "GET" :
-            url.method == PUT ? "PUT" :
-            url.method == PATCH ? "PATCH" :
-            url.method == DEL ? "DEL" : "Error:",
-            url.path, request_body);
+            request.url.method == POST ? "POST" :
+            request.url.method == GET ? "GET" :
+            request.url.method == PUT ? "PUT" :
+            request.url.method == PATCH ? "PATCH" :
+            request.url.method == DEL ? "DEL" : "Error:",
+            request.url.path, request_body);
     }
 
     int https_session_t::tracky_response(url_t* url)
     {
-        http_response_t* response = nullptr;
-        response = &response_holder;
-        //url.rest = (char*)"touch.html";
         strcpy(url->path, "touch.html");
-        prepare_file(this, url);
-        response->_code = 200;
-        response->_header_size = response->prepare_header(response->_header, response->_code, response->_body_size);
-        reader->get_transport()->send(response->_header, response->_header_size);
-        reader->get_transport()->send(response->_body, response->_body_size);
-        response->release();
+        response_send_file(this);
         return 0;
-
     }
 
     void* https_session_t::https_session()
     {
-        int             rcv_sz = 0;
-
-        //transport_t* transport = this->reader->get_transport();
-        //transport->handshake();
-        this->reader->get_transport()->handshake();
+        reader->get_transport()->handshake();
 
         while (true)
         {
-            counters.total_request++;
-#if false
-            const long long timeout_5_minutes = 100000 * 60 * 5;
-            const long long timeout_5_seconds = 100000 * 5;
-            rcv_sz = transport->recv(rcv_buff, 4096, transport->is_secured() ? timeout_5_minutes : timeout_5_seconds);
-            if (rcv_sz <= 0) break;
-            rcv_buff[rcv_sz] = 0;
-
-#else
             const char * src = request.parse_request(reader);
+            counters.total_request++;
             if (!src) {
                 counters.bad_request++;
                 break;
             }
-            else if (src == reader->zero_socket)
-            {
+            else if (src == reader->zero_socket) {
                 fprintf(stderr, "Close on remote closed connection: ");
                 break;
             }
-#endif
-
-            //printf("\033[34m%s\033[0m", rcv_buff);
-            //fflush(stdout);
+            else if (src == reader->error_socket) {
+                fprintf(stderr, "Socker error: ");
+                break;
+            }
 
             cookie_found = request._cookies.count("lid") != 0;
 
@@ -276,28 +255,25 @@ namespace xameleon {
 
             // log(url, request_body);
 
-            // printf("Response header size = %d\n", response->_header_size);
-            if (response->_header_size) {
-                reader->get_transport()->send(response->_header, response->_header_size);
-                // printf("Response body size = %d\n", response->_body_size);
+            if (response) 
+            {
+                // printf("Response header size = %d\n", response->_header_size);
+                if (response->_header_size) {
+                    reader->get_transport()->send(response->_header, response->_header_size);
+                    // printf("Response body size = %d\n", response->_body_size);
 #if DEBUG_RESPONSE
-                FILE* fd = fopen("raw/http.raw", "wb");
-                if (fd) {
-                    fwrite(response->_body, response->_body_size, 1, fd);
-                    fclose(fd);
-                }
+                    FILE* fd = fopen("raw/http.raw", "wb");
+                    if (fd) {
+                        fwrite(response->_body, response->_body_size, 1, fd);
+                        fclose(fd);
+                    }
 #endif
-                if (response->_body_size) {
-                    reader->get_transport()->send(response->_body, response->_body_size);
+                    if (response->_body_size) {
+                        reader->get_transport()->send(response->_body, response->_body_size);
+                    }
                 }
+                response->release();
             }
-            response->release();
-        }
-        if (rcv_sz == 0) {
-            printf("Client closed connection\n");
-        }
-        else if (rcv_sz < 0) {
-            fprintf(stderr, "SSL connection error\n");
         }
         reader->get_transport()->close();
         return nullptr;
@@ -310,8 +286,7 @@ extern xameleon::transport_t* create_file_descriptor_transport(FILE* fp);
 DWORD http_thread(void* arg)
 {
     xameleon::https_session_t* client = (xameleon::https_session_t*)arg;
-    LONG prev_value;
-    int timeout = (int)arg;
+//    LONG prev_value;
 
     DWORD id = GetCurrentThreadId();
     client->https_session();
@@ -328,6 +303,8 @@ DWORD http_thread(void* arg)
     //    LeaveCriticalSection(&my_critical_sction);
     //    ReleaseSemaphore(hSemaphore, 1, &prev_value);
     //}
+    delete client;
+    client = nullptr;
 
     return 0;
 }
@@ -338,6 +315,7 @@ int test_full_http(const char * name_of_raw_file)
     xameleon::http_action_t* static_page = new xameleon::static_page_action(xameleon::guest);
     xameleon::http_action_t* proxy = new xameleon::proxy_action;
     add_action_route("/", xameleon::GET, static_page);
+    add_action_route("/favicon.ico", xameleon::GET, new xameleon::get_favicon_action);
     add_action_route("/proxy", xameleon::GET, proxy);
     add_action_route("/proxy/", xameleon::GET, proxy);
     add_action_route("/proxy", xameleon::PUT, proxy);
@@ -389,19 +367,15 @@ int test_full_http(const char * name_of_raw_file)
     if (transport) {
         transport->close();
         delete transport;
+        transport = nullptr;
     }
 
     return 0;
 }
 
-//#include <windows.h>
-//__declspec(dllimport) // WINBASEAPI
-extern "C" int // BOOL
-__stdcall //WINAPI
-SetConsoleOutputCP(
+extern "C" int __stdcall SetConsoleOutputCP(
     _In_ unsigned int  wCodePageID
 );
-
 
 extern "C" int main(int argc, char* argv[])
 {

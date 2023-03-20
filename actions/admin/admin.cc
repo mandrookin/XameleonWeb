@@ -2,6 +2,11 @@
 #include <sstream>
 #include <sys/sysinfo.h>
 
+#ifndef _WIN32
+ #define O_BINARY 0
+ #include <sys/stat.h>
+ #include <fcntl.h>
+#endif
 
 #include "../../action.h"
 #include "../../lib.h"

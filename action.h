@@ -5,9 +5,6 @@
 
 namespace xameleon {
 
-    extern void prepare_file(https_session_t* session, url_t* url);
-
-
     typedef enum {
         guest,      // everybody, Not tracked
         tracked,    // everybody, Traccked

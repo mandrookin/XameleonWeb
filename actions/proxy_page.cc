@@ -136,7 +136,7 @@ http_response_t* proxy_action::process_req(https_session_t* session)
                 proxy_transport->send(rewite_header_buffer, hdr_size);
                 printf("\033[36mProxy request sent:\033[0m\n%s", rewite_header_buffer);
 
-                multipart_stream_reader_t* reader = new multipart_stream_reader_t(proxy_transport, nullptr);
+                multipart_stream_reader_t* reader = new multipart_stream_reader_t(proxy_transport);
                 http_response_t* proxy_response = new http_response_t;
                 const char* parse_proxy_response = proxy_response->parse_header(reader);
 
@@ -150,7 +150,7 @@ http_response_t* proxy_action::process_req(https_session_t* session)
                         char buffer[4096];
 
                         response->_header_size = response->prepare_header(buffer, proxy_response->_code, rest);
-                        session->get_multiart_reader()->get_transport()->send(buffer, response->_header_size);
+                        session->get_transport()->send(buffer, response->_header_size);
 
                         bool sync;
                         const char* src;
@@ -170,7 +170,7 @@ http_response_t* proxy_action::process_req(https_session_t* session)
                               );
                             *dst = 0;
 #if ! LOG_PROXY_RESPOBSE
-                            session->get_multiart_reader()->get_transport()->send(buffer, dst-buffer);
+                            session->get_multiart_reader()->get_transport()->send(buffer, (int) (dst-buffer));
 #else
                             printf("%s", buffer);
 #endif
@@ -179,7 +179,7 @@ http_response_t* proxy_action::process_req(https_session_t* session)
                                     break;
                                 }
                             }
-                        } while (rest > 0 && src != reader->zero_socket);
+                        } while ((!proxy_response->_content_lenght || rest > 0) && src != reader->zero_socket);
                     }
                 }
                 else

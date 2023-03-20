@@ -160,7 +160,15 @@ namespace xameleon
 
     int http_transport::send(char* snd_buff, int len)
     {
-        return ::send(socket, snd_buff, len, 0);
+        int status, bytes = 0;
+        while (bytes < len)
+        {
+            status = ::send(socket, snd_buff, len, 0);
+            if (status < 0)
+                return status;
+            bytes += status;
+        }
+        return bytes;
     }
 
     int http_transport::recv(char* data, int size, long long time)
@@ -185,7 +193,7 @@ namespace xameleon
             return ev;
         }
 
-        return recv(data, size);
+        return ::recv(socket, data, size, 0);
     }
 
     int http_transport::connect(const char* hostname, int port)

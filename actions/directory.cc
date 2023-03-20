@@ -24,7 +24,7 @@ http_response_t * get_directory_action::process_req(https_session_t * session)
         {
             strcpy(url->path, "/notexistpage.html");
             url->rest = url->path + 1;
-            prepare_file(session, url);
+            response_send_file(session);
             continue;
         }
 

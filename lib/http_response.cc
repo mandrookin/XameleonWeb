@@ -14,7 +14,7 @@ namespace xameleon
 
     const char* http_response_t::parse_header(multipart_stream_reader_t* reader)
     {
-        typedef enum hop { header, option, body, cr } header_state_t;
+        typedef enum hop { header, option, cr } header_state_t;
         bool sync = false;
         int rest;
         const char* src = nullptr;
@@ -70,7 +70,7 @@ namespace xameleon
                     return nullptr;
                 }
                 url_t url;
-                printf("Signature: %8x\n", signature);
+
                 if (headline[4] != '/') {
                     fprintf(stderr, "Broken HTTP signture");
                 }

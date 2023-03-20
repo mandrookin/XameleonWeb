@@ -94,14 +94,16 @@ namespace xameleon {
             form_data = nullptr;
             context_state = undefined;
         }
-        ~http_request_t() { if (form_data) delete form_data; }
+        ~http_request_t() { 
+            if (form_data) delete form_data; 
+        }
     };
 
     class http_response_t {
         int add_cookies_to_header(char* buffer, int buffsz);
     public:
         unsigned int    _max_age;
-        char* _body;
+        char*           _body;
         int             _body_size;
         int             _header_size;
         int             _code;
@@ -140,20 +142,19 @@ namespace xameleon {
     };
 
     class https_session_t {
-        multipart_stream_reader_t* reader;
-        //transport_i* transport;
+        multipart_stream_reader_t*  reader;
         std::string                 homedir;
     public:
-        time_t              start_time;
+        time_t                      start_time;
         http_session_counters_t     counters;
-        bool                cookie_found;
-        bool                session_found;
-        http_request_t      request;
-        http_response_t     response_holder;
+        bool                        cookie_found;
+        bool                        session_found;
+        http_request_t              request;
+        http_response_t             response_holder;
 
 
     private:
-        void log(url_t& url, char* request_body);
+        void log(char* request_body);
         int tracky_response(url_t* url);
 
     public:
@@ -163,10 +164,13 @@ namespace xameleon {
             homedir(homedir),
             start_time(time(nullptr)) 
         {
-            reader = new multipart_stream_reader_t(transport, nullptr);
+            reader = new multipart_stream_reader_t(transport);
         }
         ~https_session_t() 
         {
+            transport_t* fp = reader->get_transport();
+            if (fp)
+                delete fp;
             delete reader;
         }
         transport_i* get_transport() { 
@@ -177,6 +181,9 @@ namespace xameleon {
         http_session_counters_t get_counters() { return counters; }
         void* https_session();
     };
+
+    void response_send_file(class https_session_t* session);
+
 }
 
 extern void generate_uuid_v4(char * guid);

@@ -4,7 +4,7 @@ PROJECT=serv
 DEP = http.h action.h session.h
 SRC := ssl_serv.cc ssl_context.cc session_mgr.cc \
    lib/session.cc lib/http_request.cc lib/action_routes.cc lib/http_response.cc lib/dns_resolver.cc \
-   lib/guid.cc lib/multipart_form.cc lib/https_transport.cc lib/http_transport.cc lib/alloc_file.cc \
+   lib/guid.cc lib/multipart_form.cc lib/https_transport.cc lib/http_transport.cc lib/lib.cc lib/stream_reader.cc \
    actions/static_pages.cc actions/directory.cc actions/classic_cgi.cc actions/post_form.cc actions/proxy_page.cc \
    actions/admin/admin.cc \
    db/ipv4_log.cc
@@ -16,7 +16,7 @@ S_OBJ := $(SRC:%.cc=$(OBJDIR)/%.o)
 #	g++ -static ssl_serv.cc -lssl -lcrypto -lpthread -lz -o serv.static
 #	g++ $(SRC) -lssl -lcrypto -lpthread  -o serv
 
-CXXFLAGS=-c -Os -Wall -Wformat-truncation=0 
+CXXFLAGS=-c -Os -Wall -Wformat-truncation=0
 # -ggdb
 
 all: $(PROJECT)
