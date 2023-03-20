@@ -20,5 +20,12 @@ echo '<h1>Информация о памяти:</h1><br/>'
 echo '<pre>'
 cat /proc/meminfo
 echo '</pre><br/>'
+echo '<pre>$vmstat -w'
+echo '<pre>'
+vmstat -w
+echo '</pre><br/>'
+echo '<pre>$vmstat -f'
+vmstat -f
+echo '</pre><br/>'
 echo '</body>'
 echo '</html>'
