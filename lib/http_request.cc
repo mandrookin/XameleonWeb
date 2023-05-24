@@ -398,7 +398,11 @@ namespace xameleon
     uint32_t parseIPV4string(char* ipAddress) {
 #ifdef _WIN32 // CHECK_ENDIAN_LATER
         unsigned char ipbytes[4];
-        sscanf(ipAddress, "%hhu.%hhu.%hhu.%hhu", &ipbytes[3], &ipbytes[2], &ipbytes[1], &ipbytes[0]);
+        if (sscanf(ipAddress, "%hhu.%hhu.%hhu.%hhu", &ipbytes[3], &ipbytes[2], &ipbytes[1], &ipbytes[0]) != 4)
+        {
+            fprintf(stderr, "Unable arse IP v4 address\n");
+            return 0;
+        }
         //printf("%u.%u.%u.%u\n", ipbytes[3], ipbytes[2], ipbytes[1], ipbytes[0]);
         return ipbytes[0] | ipbytes[1] << 8 | ipbytes[2] << 16 | ipbytes[3] << 24;
 #else

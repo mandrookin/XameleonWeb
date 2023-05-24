@@ -79,8 +79,8 @@ namespace xameleon
                 url.version.major = headline[5] - '0';
                 url.version.minor = headline[7] - '0';
 
-                sscanf(headline + 9, "%u", &this->_code);
-                if (_code == 0) {
+                int na = sscanf(headline + 9, "%u", &this->_code);
+                if (na != 1 || _code == 0) {
                     fprintf(stderr, "Broken http response - zero HTTP code\n");
                 }
 

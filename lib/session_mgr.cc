@@ -100,13 +100,13 @@ namespace xameleon
                 break;
             }
 
-            https_session_t* session = (*ports)[pr]; // ports[ipV4->sin_port];
+            https_session_t* current_session = (*ports)[pr]; // ports[ipV4->sin_port];
             if(session != nullptr)
             {
-                printf("Session found\n");
+//                printf("Session found\n");
 #ifdef WIN32
 #else
-                http_session_counters_t counter = session->get_counters();
+                http_session_counters_t counter = current_session->get_counters();
                 ipv4_record_t record;
 
                 int status = log->load_record(ip, &record);
@@ -123,22 +123,24 @@ namespace xameleon
                 }
                 log->save_record(&record);
 
-                if (session->request.x_forward_for != 0 || session->request.x_real_ip != 0)
+                if (current_session->request.x_forward_for != 0 || current_session->request.x_real_ip != 0)
                 {
-                    if (session->request.x_forward_for != session->request.x_real_ip)
-                        printf("Denug: x_forward_for = 0x%08x x_real_ip = 0x%08x\n", session->request.x_forward_for, session->request.x_real_ip);
+                    if (current_session->request.x_forward_for != current_session->request.x_real_ip)
+                        printf("Denug: x_forward_for = 0x%08x x_real_ip = 0x%08x\n", 
+                            current_session->request.x_forward_for, 
+                            current_session->request.x_real_ip);
 
-                    if (session->request.x_forward_for != 0)
+                    if (current_session->request.x_forward_for != 0)
                     {
-                        int status = log->load_record(session->request.x_forward_for, &record);
+                        int status = log->load_record(current_session->request.x_forward_for, &record);
                         if (status == DB_NOTFOUND) {
-                            record.ip = (int32_t)session->request.x_forward_for;
+                            record.ip = (int32_t)current_session->request.x_forward_for;
                             record.first_seen = time(nullptr);
                             record.last_seen = record.first_seen;
                             record.counters = counter;
                         }
                         else if (status == 0) {
-                            printf("FOUND FORWARD IP %08x == %08x\n", session->request.x_forward_for, record.ip);
+                            printf("FOUND FORWARD IP %08x == %08x\n", current_session->request.x_forward_for, record.ip);
                             record.last_seen = time(nullptr);
                             record.counters += counter;
                         }
