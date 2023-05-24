@@ -395,7 +395,7 @@ namespace xameleon
     static int get_file_name(FILE* fp, char* namebuf, int bufsize)
     {
 #ifdef _WIN32
-        int nr;
+        int nr = 0;
 #else
         ssize_t nr;
 #ifndef __linux__
@@ -529,22 +529,30 @@ namespace xameleon
             case text_xml:
             {
                 char namebuf[512];
-                char* nowarn = tmpnam(namebuf);
-                printf("%s\n", nowarn);
-                this->filename = namebuf;
-                type = region::file;
-                this->fp = fopen(this->filename.c_str(), "wb");
+                if (!filename.empty())
+                {
+                    char* nowarn = tmpnam(namebuf);
+                    printf("%s\n", nowarn);
+                    this->filename = namebuf;
+                    type = region::file;
+                    this->fp = fopen(this->filename.c_str(), "wb");
+                }
+                else
+                    printf("Skip empty section\n");
                 break;
             }
             case text_html:
+            case text_plain:
             case image_png:
             case image_jpeg:
                 type = region::file;
                 // Поскольку файл не открыт - игнор этих вложений.
                 break;
             default:
-                printf("Unknown content-type: %s\n", content_type.c_str());
-                break;
+                printf("\033[33mUnknown multipart content-type\033[0m: %s\n", content_type.c_str());
+                state = sync;
+                type = sync;
+                return 0;
             }
 
             if (!this->transfer_encoding.empty())
@@ -560,6 +568,8 @@ namespace xameleon
                     break;
                 default:
                     printf("Unsported encoding: %s\n", transfer_encoding.c_str());
+                    state = sync;
+                    return 0;
                 }
             }
         }

@@ -12,7 +12,7 @@ namespace xameleon
         return name;
     }
 
-    const char* http_response_t::parse_header(multipart_stream_reader_t* reader)
+    const char* http_response_t::parse_header(http_stream_t* reader)
     {
         typedef enum hop { header, option, cr } header_state_t;
         bool sync = false;
@@ -31,8 +31,10 @@ namespace xameleon
             do {
                 src = reader->get_pchar(sync, rest);
                 _header_size++;
-                if (sync)
+                if (sync) {
+
                     break;
+                }
                 if (*src == '\r')
                     *ptr++ = 0;
                 if (pcolon)
@@ -82,7 +84,8 @@ namespace xameleon
                     fprintf(stderr, "Broken http response - zero HTTP code\n");
                 }
 
-                http_reason = (linelen > 13) ? string(headline + 13) : "";
+                string http_reason = (linelen > 13) ? string(headline + 13) : "";
+                _http_reason = http_reason;
                 state = option;
                 continue;
             }
@@ -116,13 +119,22 @@ namespace xameleon
                     case hash("content-security-policy"):
                         _content_security_policy = string(pcolon);
                         break;
+                    case hash("accept-ranges"):
+                        _accept_ranges = string(pcolon);
+                        break;
+                    case hash("cache-control"):
+                        _cache_control = string(pcolon);
+                        break;
+                    case hash("etag"):
+                        _etag = string(pcolon);
+                        break;
                     default:
                         printf("Unparsed HTTP option in resonse: \033[36m%s\033[0m: %s\n", headline, pcolon);
                         break;
                     }
                     continue;
                 }
-                printf("Got header deimiter\n");
+                // printf("Got header deimiter\n");
                 sync = true;
                 continue;
 

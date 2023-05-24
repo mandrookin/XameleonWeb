@@ -9,7 +9,6 @@
 #ifndef _WIN32
 #include <cstring>
 #endif
-// 中国
 
 namespace xameleon
 {
@@ -32,12 +31,13 @@ namespace xameleon
 
         typedef enum {
             octet_stream = hash("application/octet-stream"), // 0x62c58c5d,
-            text_xml = hash("text/xml"), //0xc400610d,
-            text_html = hash("text/tml"), //0x50ad62e9,
-            text_css = hash("text/css"),// 0xb9a460d1,
-            image_gif = hash("image/gif"), //0x6a4a2898,
-            image_png = hash("image/png"), //0x7d17ad1b,
-            image_jpeg = hash("image/jpg") //0x207543c5
+            text_xml = hash("text/xml"),
+            text_html = hash("text/html"),
+            text_plain = hash("text/plain"),
+            text_css = hash("text/css"),
+            image_gif = hash("image/gif"),
+            image_png = hash("image/png"),
+            image_jpeg = hash("image/jpg")
         } contect_type_t;
 
         typedef enum {

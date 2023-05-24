@@ -18,11 +18,11 @@ namespace xameleon
     // Возвращает указатель на поле путь HTTP заголовка
     //
 
-    char* get_http_method(char* hdr, url_t* uri)
+    const char* get_http_method(const char* hdr, url_t* uri)
     {
         const char G = 'G', E = 'E', T = 'T', P = 'P', U = 'U', O = 'O', S = 'S', SP = ' ';
         char predicate;
-        char* next = nullptr;
+        const char* next = nullptr;
         uri->method = ERR;
         if (hdr[0] == G) {
             predicate = ((hdr[1] ^ E) | (hdr[2] ^ T) | (hdr[3] ^ SP));
@@ -66,52 +66,54 @@ namespace xameleon
     // Функция разбора URL на составные части и занесение их в структуру.
     // Возвращает указатель на HTTP заголовок или NULL, если произошла ошибка разбора
     //
-    char* get_http_path(char* ptr, url_t* uri)
+    const char* get_http_path(const char* ptr, url_t* uri)
     {
+        if (uri->pagename == nullptr)
+            throw "Fix me just now";
         const char* allowed_in_path = "/-._~";
-        uri->query_count = 0;
+        uri->parameters_count = 0;
         for (int i = 0; i < 32; i++) {
-            uri->query[i].key = nullptr;
-            uri->query[i].val = nullptr;
+            uri->parameters[i].key = nullptr;
+            uri->parameters[i].val = nullptr;
         }
         for (int i = 0; i < max_path_len - 1; i++) {
             if (*ptr == ' ' || *ptr == '\0') {
                 uri->path_len = i;
-                uri->path[i] = '\0';
+                uri->pagename[i] = '\0';
                 return ++ptr;
             }
             if (*ptr == '?') {
-                uri->path[i] = '\0';
+                uri->pagename[i] = '\0';
                 ++ptr;
-                uri->query[uri->query_count].key = uri->path + i + 1;
-                uri->query_count++;
+                uri->parameters[uri->parameters_count].key = uri->pagename + i + 1;
+                uri->parameters_count++;
                 uri->path_len = i;
                 bool key_found = true;
                 for (i++; i < max_path_len; i++) {
                     if (*ptr == ' ') {
-                        uri->path[i] = '\0';
+                        uri->pagename[i] = '\0';
                         return ++ptr;
                     }
                     if (*ptr == '=' && key_found) {
-                        uri->path[i] = '\0';
-                        uri->query[uri->query_count - 1].val = uri->path + i + 1;
+                        uri->pagename[i] = '\0';
+                        uri->parameters[uri->parameters_count - 1].val = uri->pagename + i + 1;
                         ptr++;
                         key_found = false;
                         continue;
                     }
                     if (*ptr == '&') {
-                        uri->path[i] = '\0';
-                        uri->query[uri->query_count].key = uri->path + i + 1;
-                        uri->query_count++;
+                        uri->pagename[i] = '\0';
+                        uri->parameters[uri->parameters_count].key = uri->pagename + i + 1;
+                        uri->parameters_count++;
                         ptr++;
                         key_found = true;
                         continue;
                     }
                     if (*ptr != '%')
-                        uri->path[i] = *ptr++;
+                        uri->pagename[i] = *ptr++;
                     else {
                         ptr++;
-                        uri->path[i] = (get_hex_digit(*ptr) << 4) | get_hex_digit(*(ptr + 1));
+                        uri->pagename[i] = (get_hex_digit(*ptr) << 4) | get_hex_digit(*(ptr + 1));
                         ptr += 2;
                     }
                 }
@@ -120,11 +122,11 @@ namespace xameleon
                 if (!isalnum(*ptr) && !strchr(allowed_in_path, *ptr)) {
                     break;
                 }
-                uri->path[i] = *ptr++;
+                uri->pagename[i] = *ptr++;
             }
             else {
                 ptr++;
-                uri->path[i] = (get_hex_digit(*ptr) << 4) | get_hex_digit(*(ptr + 1));
+                uri->pagename[i] = (get_hex_digit(*ptr) << 4) | get_hex_digit(*(ptr + 1));
                 ptr += 2;
             }
         }
@@ -132,7 +134,7 @@ namespace xameleon
     }
 
 
-    char* get_http_version(char* p, url_t* uri)
+    const char* get_http_version(const char* p, url_t* uri)
     {
         const char H = 'H', T = 'T', P = 'P', SL = '/', DOT = '.';
         char predicate = (p[0] ^ H) | (p[1] ^ T) | (p[2] ^ T) | (p[3] ^ P) | (p[4] ^ SL);
@@ -148,11 +150,12 @@ namespace xameleon
 
 #include <stdio.h>
 
-    char* parse_http_request(char* hdr, url_t* uri)
+    const char* parse_http_request(const char* hdr, url_t* uri)
     {
-        char* next;
+        const char* next;
         next = get_http_method(hdr, uri);
         if (next) {
+            uri->pagename = uri->path;
             next = get_http_path(next, uri);
             if (next)
                 next = get_http_version(next, uri);
@@ -173,9 +176,9 @@ namespace xameleon
         _cookies.clear();
         ranges_count = 0;
         encoding = plain;
-        port = 0; // Использовать порт по умолчанию, если не задан
-        x_forward_for = 0;
-        x_real_ip = 0;
+//        port = 0; // Использовать порт по умолчанию, если не задан
+        _x_forward_for = 0;
+        _x_real_ip = 0;
     }
 
     void http_request_t::parse_range(char* rangestr)
@@ -229,6 +232,24 @@ namespace xameleon
         this->_cache_control = cache_control;
         printf("Cache control: %s\n", cache_control);
     }
+    void http_request_t::parse_accept_formats(char* accecpt_formats)
+    {
+        this->_accept = accecpt_formats;
+//        printf("Accept: %s\n", accecpt_formats);
+    }
+
+    void http_request_t::parse_connection(char* connection_option)
+    {
+        switch (hash(connection_option))
+        {
+        case hash("keep-alive"):
+            connection_type = (connection_type_t) hash(connection_option);
+            break;
+        default:
+            printf("TODO: parse Connection: %s\n", connection_option);
+            break;
+        }
+    }
 
     void http_request_t::parse_cookies(char* cookie)
     {
@@ -276,7 +297,7 @@ namespace xameleon
                         this->major_type = typehash;
                         break;
                     default:
-                        printf("\033[36mUnknow %p Content-type: %s\033[0m\n", typehash, type);
+                        printf("\033[36mUnknow %p Content-type: %s\033[0m\n", (void*)typehash, type);
                     }
 
                 }
@@ -307,7 +328,7 @@ namespace xameleon
                         break;
 
                     default:
-                        printf("\033[36mUnknow %p content sub type: %s\033[0m\n", typehash, type);
+                        printf("\033[36mUnknow %p content sub type: %s\033[0m\n", (void*)typehash, type);
                         break;
                     }
                 }
@@ -387,12 +408,12 @@ namespace xameleon
 
     void http_request_t::parse_forward_tag(char* ip_string)
     {
-        x_forward_for = parseIPV4string(ip_string);
-        printf("x-forwarded-for: %s is %08x\n", ip_string, x_forward_for);
+        _x_forward_for = parseIPV4string(ip_string);
+        printf("x-forwarded-for: %s is %08x\n", ip_string, _x_forward_for);
 
     }
 
-    const char* http_request_t::parse_http_header(multipart_stream_reader_t* reader)
+    const char* http_request_t::parse_http_header(http_stream_t* reader)
     {
         typedef enum { enter, name, delimiter, value, finish, body } state_t;
         char* line;
@@ -486,24 +507,35 @@ namespace xameleon
             switch (hash(line))
             {
             case hash("host"):
+                host = find_host(val);
+                if (host == nullptr) {
+                    this->_cache_control = val;
+                    printf("Host is not mine: %s\n", val);
+                    return nullptr;
+                }
+#if false
                 pcolon = strchr(val, ':');
                 if (pcolon) {
                     *pcolon++ = '\0';
                     port = atoi(pcolon);
                 }
-                if (val != nullptr)
+                if (val != nullptr) {
                     _host = val; // delim;
+                }
+
                 else
                     fprintf(stderr, "Host option empty\n");
+#endif
                 break;
             case hash("connection"):
+                this->parse_connection(val);
                 break;
             case hash("x-forwarded-for"):
-                x_forward_for = parseIPV4string(val); // delim);
+                _x_forward_for = parseIPV4string(val); // delim);
                 //                parse_forward_tag(delim);
                 break;
             case hash("x-real-ip"):
-                x_real_ip = parseIPV4string(val); // delim);
+                _x_real_ip = parseIPV4string(val); // delim);
                 //                printf("x-real-ip: %s\n", delim);
                 break;
             case hash("referer"):
@@ -517,8 +549,10 @@ namespace xameleon
                 parse_cookies(val); // delim);
                 break;
             case hash("user-agent"):
+                this->_user_agent = val;
                 break;
             case hash("accept"):
+                parse_accept_formats(val);
                 break;
             case hash("accept-encoding"):
                 parse_encoding(val); // delim);
@@ -526,13 +560,15 @@ namespace xameleon
                 break;
             case hash("accept-language"):
                 break;
-            case hash("if-none-match"):
-                break;
+//            case hash("if-none-match"):
+//                break;
             case hash("upgrade-insecure-requests"):
+                upgrade_insecure_requests = std::atoi(val);
                 break;
             case hash("range"):
                 parse_range(val);// delim);
                 break;
+#ifdef SEC
             case hash("sec-fetch-site"):
                 break;
             case hash("sec-fetch-mode"):
@@ -547,13 +583,14 @@ namespace xameleon
                 break;
             case hash("sec-ch-ua-platform"):
                 break;
+#endif
                 // Found these values on HTTP PUT request
             case hash("content-length"):
                 _content_lenght = std::atoi(val);
                 printf("\033[36mContent-lenght: %d\033[0m\n", _content_lenght);
                 break;
-            case hash("origin"):
-                break;
+//            case hash("origin"):
+//                break;
             case hash("content-type"):
                 _content_type = val; // delim;
                 line = parse_content_type(val); // delim);
@@ -563,12 +600,13 @@ namespace xameleon
                 }
                 line = header;
                 break;
-            case hash("pragma"):
-                break;
+//            case hash("pragma"):
+//                break;
 
             default:
-                printf("Unparsed HTTP tag: %s value: %s\n", line, val); // delim);
-                printf("Compare hashes: %08x value: %08x\n", hash(line), hash("content-Length"));
+                _collected_tags[line] = val;
+                //printf("Collected HTTP tag: \033[36m%s\033[0m value: %s\n", line, val); // delim);
+                //printf("Compare hashes: %08x value: %08x\n", hash(line), hash("content-Length"));
                 break;
             }
             //            line = sterm + 2;
@@ -576,48 +614,26 @@ namespace xameleon
         return src_ptr;
     }
 
-    // Полжу пока сюда, но этому здесь не место
-    const char * url_s::get_method()
-    {
-        switch (method)
-        {
-        case POST: return "POST";
-        case GET:  return "GET";
-        case PUT:  return "PUT";
-        case PATCH: return "PATCH";
-        case DEL: return "DEL";
-        }
-        return "GET";
-    }
-
-    const char* url_s::get_http_version()
-    {
-        switch (version.human)
-        {
-        case v0_9: return "HTTP/0.9";
-        case v1_0: return "HTTP/1.0";
-        case v1_1: return "HTTP/1.1";
-        case v2_0: return "HTTP/2.0";
-        }
-        return "HTTP/1.0";
-    }
-
     bool http_request_t::proxy_rewrite_header(char* header_buffer, int* size)
     {
         bool status = false;
         int freesize = *size;
         int wr_sz;
-        wr_sz = snprintf(header_buffer, freesize, 
-            "%s / %s\r\n"
+        const char* destination_host = host->home.c_str();
+        int pos = host->home.find("://");
+        destination_host = pos == std::string::npos ? destination_host : destination_host + pos + 3;
+        wr_sz = snprintf(header_buffer, freesize,
+            "%s %s %s\r\n"
             "Host: %s:%d\r\n"
             "User-Agent: %s\r\n"
             "Accept: %s\r\n"
             "Accept-Language: %s\r\n"
+            "Connection: keep-alive\r\n"
             "\r\n"
-            ,url.get_method(), url.get_http_version(),
-            _host.c_str(), port,
-            "Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0",
-            "text/plain, text/html, img/svg",
+            , url.get_method(), url.pagename, url.get_http_version(),
+            destination_host, host->port,
+            this->_user_agent.c_str(), // "Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0",
+            this->_accept.c_str(),     // "text/plain, text/html, img/svg",
             "en-US,en;q=0.9"
         );
         *size = wr_sz;
@@ -625,7 +641,7 @@ namespace xameleon
         return status;
     }
 
-    const char* http_request_t::parse_request(multipart_stream_reader_t* reader)
+    const char* http_request_t::parse_request(http_stream_t* reader)
     {
         bool sync = false;
         int rest;
@@ -663,7 +679,7 @@ namespace xameleon
             int linelen = ptr - headline;
             //           rcv_sz = linelen;
 
-            char* header_body = parse_http_request(headline, &url);
+            const char* header_body = parse_http_request(headline, &url);
 
             if (header_body == nullptr) {
                 fprintf(stderr, "Got broken HTTP request: %s size: %u\n%s\n", url.path, linelen, headline);
@@ -671,9 +687,14 @@ namespace xameleon
                 break;
             }
 
-            const char* request_body = parse_http_header(reader);
-            if (!request_body) {
-                fprintf(stderr, "HTTP header error\n");
+            const char* status = parse_http_header(reader);
+            if (!status) {
+                if (this->host == nullptr) {
+                    printf("Unknon host: %s\n", this->_cache_control.c_str());
+                }
+                else {
+                    printf("HTTP \031[36mheader error\033[0m\n");
+                }
                 src = nullptr;
             }
 

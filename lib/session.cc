@@ -16,6 +16,7 @@
 //#include <winsock2.h>
 #endif
 #include <cstdlib>
+#include <vector>
 
 // 中国
 
@@ -31,6 +32,9 @@
 #include "../transport.h"
 #include "../session.h"
 #include "../action.h"
+#include "../lib.h"
+#include "../session_mgr.h"
+#include <locale>
 
 namespace xameleon {
 
@@ -47,16 +51,16 @@ namespace xameleon {
     void http_response_t::release()
     {
         if (_body != nullptr) {
-//            printf("\n\n%s\n\n", _body);
+            printf("\n\n%s\n\n", _body);
             delete _body;
             _body = nullptr;
-//            printf("---\n");
+            printf("---\n");
         }
         _code = 200;
         _max_age = 0;
         _body_size = 0;
         _header_size = 0;
-        etag.clear();  // А что с кэшем тогда?
+        _etag.clear();  // А что с кэшем тогда?
         _cookies.clear();
     }
 
@@ -101,7 +105,7 @@ namespace xameleon {
     {
         int size =
             snprintf(_header, sizeof(_header), // Будь осторожен, впоследствии header будет указателем на локальные данные и тогда от sizeof всё рассыпется
-                "HTTP/1.1 %u Found\r\n"
+                "HTTP/1.1 %d Found\r\n"
                 "Connection: %s\r\n"
                 "",
                 code,
@@ -113,33 +117,38 @@ namespace xameleon {
         return size;
     }
 
+    const char* const format =
+        "HTTP/1.1 %d OK\r\n"
+        "Date: %s\r\n"
+        "Server: Xameleon/1.0.0\r\n"
+        "Content-Type: %s\r\n"
+        "Accept-Ranges: bytes\r\n";
+
+////    char debug_buff[1024];
+
     int http_response_t::prepare_header(char* header, int code, int body_size)
     {
-        char tbuf[80];
+        char tbuf[256];
         time_t now = time(0);
-        struct tm tm = *gmtime(&now);
-        strftime(tbuf, sizeof tbuf, "%a, %d %b %Y %H:%M:%S %Z", &tm);
+        _locale_t locale = _get_current_locale();
+        struct tm * tm = gmtime(&now);
 
-        const char* format =
-            "HTTP/1.1 %d OK\r\n"
-            "Date: %s\r\n"
-            "Server: Pressure/1.0.0 (POSIX)\r\n"
-            "Connection: keep-alive\r\n"
-            "Content-Type: %s\r\n"
-            "Accept-Ranges: bytes\r\n";
+////        _strftime_l(debug_buff, sizeof(debug_buff), "%a, %d %b %Y %H:%M:%S %Z", tm, locale);
+        strftime(tbuf, sizeof(tbuf), "%a, %d %b %Y %H:%M:%S %Z", tm);
 
-        int header_size = snprintf(header, 1024, format,
-            code, tbuf, _content_type.c_str(), body_size);
-        if (body_size)
-            header_size += snprintf(header + header_size, 1024- header_size, 
-                "Content-Length: %d\r\n", body_size);
+        int header_size = snprintf(header, 1024 /*bullshit?*/, format,
+            code, tbuf, _content_type.c_str());
+        if (body_size) {
+            header_size += snprintf(header + header_size, 1024 - header_size,
+                "Connection: keep-alive\r\nContent-Length: %d\r\n", body_size);
+        }
 
-        if (!etag.empty())
+        if (!_etag.empty())
         {
             header_size += snprintf(header + header_size, 1024 - header_size,
                 "Cache-Control: private, max-age=%u, must-revalidate, proxy-revalidate\r\n"
                 "ETag: %s\r\n",
-                _max_age, etag.c_str()
+                _max_age, _etag.c_str()
             );
         }
         header_size += add_cookies_to_header(header + header_size, 1024 - header_size);
@@ -147,37 +156,71 @@ namespace xameleon {
         return header_size;
     }
 
+    const char* cszLocalStyletyle =
+        "        * { "
+        "margin: 0; "
+        "padding : 0; "
+        "border : 0; "
+        "outline : 0; "
+        "font-size: 100%%; "
+        "vertical-align: baseline;"
+"       background: transparent;"
+        " }";
 
-    http_response_t* https_session_t::page_not_found(http_method_t method, char* url, const char* referer)
+    const char * cszPageNotFound =
+        "<!DOCTYPE html>"
+        "<html><head><title>Page not found</title></head>"
+        "<style>%s</style>"
+        "<body>"
+            "<br/>"
+            "<div style=\"width:100%%\">"
+                "<div style=\"float:left; width:25%%\"><br/>"
+                    "<br/><img src=\"/img/cryface.svg\" alt=\"Web\" class=\"avatar\">"
+                "</div>"
+                "<div style=\"float:right; width:70%%; padding-left:25px\"><br/>"
+                    "<h2><br/>%s %s not found<br></h2><br/>"
+                    "<br/>%s"
+                "</div>"
+            "</div>"
+        "</body></html>";
+
+    void https_session_t::page_not_found(http_method_t method, const char* page, const char* referer)
     {
+        std::string                     stacked_content_type = response_holder._content_type;;
+        char ref[2048];
+        char body[4096];
+
+        referer = referer ? referer : "";
         response_holder._code = 404;
         response_holder._content_type = "text/html; charset=utf-8";
-        response_holder._body = new char[4096];
-        response_holder._body_size = snprintf(response_holder._body, 4096,
-            "<html><head><title>Page not found</title></head><body><p>"
-            "Method %s<br>Page '%s' not found<br>"
-            "</p><p><a href='%s'</p></body></html>\r\n",
-            method == POST ? "POST" :
-            method == GET ? "GET" :
-            method == PUT ? "PUT" :
-            method == PATCH ? "PATCH" :
-            method == DEL ? "DEL" : "-Unknown-",
-            url, referer ? referer : ""
-        );
-        response_holder._header_size = response_holder.prepare_header(response_holder._header, 404, response_holder._body_size);
+        response_holder._body = body;
+        ref[0] = 0;
+        if (referer && referer[0] != 0)
+            snprintf(ref, sizeof(ref), "Referenced from %s", referer);
+        response_holder._body_size = snprintf(
+            (char*) response_holder._body, sizeof(body), cszPageNotFound,
+            cszLocalStyletyle, http_method(method), page, ref);
+        response_holder._header_size = response_holder.prepare_header(response_holder._header, 200 /*404*/, response_holder._body_size);
+        get_transport()->send(response_holder._header, response_holder._header_size);
+        get_transport()->send(response_holder._body, response_holder._body_size);
+        response_holder._content_type = stacked_content_type;
+    }
 
-        return &response_holder;
+    void https_session_t::site_not_found(const char * reqested_host)
+    {
+        // Здесь есть интересная воможность включить PROXY автоматически
+        std::string host_message(reqested_host);
+        host_message += " - host ";
+
+        page_not_found( request.url.method, host_message.c_str(), request._referer.c_str() );
+        // А вот тут неплохо бы было вывести приветствие, с показом поддерживаемых доменов
     }
 
     void https_session_t::log(char* request_body)
     {
         ///            printf("\tPATH:%s\n\tREST:%s\n", url.path, url.rest);
-        printf("%s %s\n\033[33m%s\033[0m\n",
-            request.url.method == POST ? "POST" :
-            request.url.method == GET ? "GET" :
-            request.url.method == PUT ? "PUT" :
-            request.url.method == PATCH ? "PATCH" :
-            request.url.method == DEL ? "DEL" : "Error:",
+        printf("%s %s\n\033[33m%s\033[0m\n", 
+            http_method(request.url.method),
             request.url.path, request_body);
     }
 
@@ -197,6 +240,14 @@ namespace xameleon {
             const char * src = request.parse_request(reader);
             counters.total_request++;
             if (!src) {
+                if (request.host == nullptr)
+                {
+                    if (request.url.version.major == 1 && request.url.version.minor == 0) {
+                        // https://stackoverflow.com/questions/56331503/when-would-you-get-a-web-request-without-a-host-name
+                        printf("Default page is not implemented yet\n");
+                    }
+                    this->site_not_found(request._cache_control.c_str());
+                }
                 counters.bad_request++;
                 break;
             }
@@ -211,50 +262,66 @@ namespace xameleon {
 
             cookie_found = request._cookies.count("lid") != 0;
 
-            if (request.x_forward_for != 0)
+            if (request._x_forward_for != 0)
                 counters.x_forward_counters++;
-            if (request.x_real_ip != 0)
+            if (request._x_real_ip != 0)
                 counters.x_realip_counters++;
+
+            get_active_sessions()->touch_page(request.url);
 
             http_response_t* response = nullptr;
 
-            http_action_t* action = find_http_action(request.url);
-            if (!action) {
-                counters.not_found++;
-                printf("Not found counters = %d\n", counters.not_found);
-                response = page_not_found(request.url.method, request.url.path, request._referer.c_str());
-                if (request._content_lenght != 0) {
-                    // Рвём соединение если нам пытаются залить какие-то данные, а их некуда лить. 
-                    // Это лучше, чем попусту тянуть возможно мегабайты данных
-                    reader->get_transport()->send(response->_header, response->_header_size);
-                    reader->get_transport()->send(response->_body, response->_body_size);
-                    break;
-                }
-            }
-#ifdef HTTP_REDIRECT
-            else if (reader->get_transport()->is_secured() == 0) {
-                counters.http2https++;
-                response = &response_holder;
-                char    jump_to[1024];
-                if (request._referer.size() > 0) {
-                    printf("TODO: catch reference from '%s'\n", request._referer.c_str());
-                }
-                printf("Redirect to host: %s\n", request._host.c_str());
-                snprintf(jump_to, sizeof(jump_to) - 1, "https://%s", request._host.c_str());
-                response->_header_size = response->redirect_to(302, jump_to, false);
-            }
+            http_action_t* action = nullptr;
+
+            if (request.host->mode != proxy)
+            {
+                action = find_http_action(request);
+                if (!action) {
+                    counters.not_found++;
+                    printf("Not found counters = %d\n", counters.not_found);
+                    page_not_found(request.url.method, request.url.path, request._referer.c_str());
+#if TODO
+                    if (request._content_lenght != 0) {
+                        // Рвём соединение если нам пытаются залить какие-то данные, а их некуда лить. 
+                        // Это лучше, чем попусту тянуть возможно мегабайты данных
+                        reader->get_transport()->send(response->_header, response->_header_size);
+                        reader->get_transport()->send(response->_body, response->_body_size);
+                        break;
+                    }
 #endif
-            else {
-                //printf("Rights: %d Cookie found: %d\n", action->get_rights(), cookie_found);
-                if (action->get_rights() == tracked && !cookie_found /*&& !session_found*/) {
-                    this->tracky_response(&request.url);
-                    continue;
                 }
-                response = action->process_req(this);
+#ifdef HTTP_REDIRECT
+                else if (reader->get_transport()->is_secured() == 0) {
+                    counters.http2https++;
+                    response = &response_holder;
+                    char    jump_to[1024];
+                    if (request._referer.size() > 0) {
+                        printf("TODO: catch reference from '%s'\n", request._referer.c_str());
+                    }
+                    printf("Redirect to host: %s\n", request._host.c_str());
+                    snprintf(jump_to, sizeof(jump_to) - 1, "https://%s", request._host.c_str());
+                    response->_header_size = response->redirect_to(302, jump_to, false);
+                }
+#endif
+                else {
+                    //printf("Rights: %d Cookie found: %d\n", action->get_rights(), cookie_found);
+                    if (action->get_rights() == tracked && !cookie_found /*&& !session_found*/) {
+                        this->tracky_response(&request.url);
+                        continue;
+                    }
+                    action->process_req(this);
+                }
+            }
+            else
+            {
+                //////long long rcv_timeout = (long long)1000000 * this->request.host->http_session_maxtime;
+                //////this->get_multiart_reader()->set_receive_timer(rcv_timeout);
+                this->reverse_proxy();
             }
 
             // log(url, request_body);
 
+#if false
             if (response) 
             {
                 // printf("Response header size = %d\n", response->_header_size);
@@ -272,8 +339,10 @@ namespace xameleon {
                         reader->get_transport()->send(response->_body, response->_body_size);
                     }
                 }
-                response->release();
             }
+#endif
+            if(response)
+                response->release();
         }
         reader->get_transport()->close();
         return nullptr;
@@ -281,28 +350,28 @@ namespace xameleon {
 }
 
 #ifdef  _WIN32
-extern xameleon::transport_t* create_file_descriptor_transport(FILE* fp);
+extern xameleon::transport_i* create_file_descriptor_transport(FILE* fp);
 
 DWORD http_thread(void* arg)
 {
     xameleon::https_session_t* client = (xameleon::https_session_t*)arg;
-//    LONG prev_value;
+    char client_name[128];
 
     DWORD id = GetCurrentThreadId();
+
+//---
+    client->get_transport()->describe(client_name, sizeof(client_name));
+    printf("+ HTTP session: %s - ", client_name);
+    xameleon::get_active_sessions()->add_session(client);
+//    pthread_detach(pthread_self());
     client->https_session();
+    xameleon::get_active_sessions()->remove_session(client);
+//    delete client;
+    printf("- HTTP session: %s\n", client_name);
+  //  pthread_exit(NULL);
+    //---
 
-    //for (int i = 0; i < 5; i++)
-    //    ev = new event_t;
 
-    //    ev->event_name = "Thread #" + to_string(id);
-    //    ev->temperature = get_float_random_number();
-
-    //    // Следующие 4 строки - передача сообщения
-    //    EnterCriticalSection(&my_critical_sction);
-    //    pogoda.push_back(ev);
-    //    LeaveCriticalSection(&my_critical_sction);
-    //    ReleaseSemaphore(hSemaphore, 1, &prev_value);
-    //}
     delete client;
     client = nullptr;
 
@@ -314,7 +383,9 @@ int test_full_http(const char * name_of_raw_file)
 {
     xameleon::http_action_t* static_page = new xameleon::static_page_action(xameleon::guest);
     xameleon::http_action_t* proxy = new xameleon::proxy_action;
+    xameleon::http_action_t* cgi_bin = new xameleon::cgi_action(xameleon::guest);
     add_action_route("/", xameleon::GET, static_page);
+    add_action_route("/", xameleon::POST, new xameleon::post_form_action(xameleon::guest));
     add_action_route("/favicon.ico", xameleon::GET, new xameleon::get_favicon_action);
     add_action_route("/proxy", xameleon::GET, proxy);
     add_action_route("/proxy/", xameleon::GET, proxy);
@@ -324,7 +395,10 @@ int test_full_http(const char * name_of_raw_file)
     add_action_route("/proxy/", xameleon::POST, proxy);
     add_action_route("/proxy", xameleon::DEL, proxy);
     add_action_route("/proxy/", xameleon::DEL, proxy);
-
+    add_action_route("/upload", xameleon::GET, new xameleon::get_directory_action(xameleon::guest));
+    add_action_route("/admin/", xameleon::GET, new xameleon::admin_action);
+    add_action_route("/cgi/", xameleon::GET, cgi_bin);
+    add_action_route("/cgi/", xameleon::POST, cgi_bin);
 #if FILE_TEST
     FILE* fp = fopen(name_of_raw_file, "rb");
     if (fp == NULL)
@@ -337,13 +411,26 @@ int test_full_http(const char * name_of_raw_file)
     test_session.https_session();
     fclose(fp);
 #else
-    xameleon::transport_t* transport = xameleon::create_http_transport();
+    xameleon::transport_i* transport = xameleon::get_http_transport("server");
     xameleon::transport_i* client_transport = nullptr;
 
     transport->bind_and_listen(80);
 
+//    int accepted_connections_count = 0;
+    const int MAX_CONNECTIONS = 4;
+    
+    std::list<HANDLE>     thread_list;
+
     while (true)
     {
+        if (thread_list.size() == MAX_CONNECTIONS) {
+            DWORD return_value;
+            std::vector<HANDLE> v { std::begin(thread_list), std::end(thread_list) };
+            return_value = WaitForMultipleObjects( (DWORD) v.size(), v.data(), FALSE, INFINITE);
+            if (return_value >= WAIT_OBJECT_0 && return_value < WAIT_OBJECT_0 + v.size() ) {
+                thread_list.remove(v[return_value - WAIT_OBJECT_0]);
+            }
+        }
         client_transport = transport->accept();
         if (!client_transport) {
             if (true)
@@ -352,15 +439,21 @@ int test_full_http(const char * name_of_raw_file)
                 puts("\033[36m\nServer stopped by TERM signal\033[0m\n");
             break;
         }
-        xameleon::https_session_t* client = new xameleon::https_session_t(client_transport, "pages");
+
+//        ++accepted_connections_count;
+
+        xameleon::https_session_t* client = new xameleon::https_session_t(client_transport);
 
         DWORD  thread_id = 0;
         HANDLE thrd = CreateThread(nullptr, 0, http_thread, (void*)client, 0, &thread_id);
+        
 
         if (thrd == nullptr) {
             perror("Unable create client thread");
             delete client;
         }
+
+        thread_list.push_back(thrd);
     }
 #endif
 
@@ -373,15 +466,22 @@ int test_full_http(const char * name_of_raw_file)
     return 0;
 }
 
-extern "C" int __stdcall SetConsoleOutputCP(
-    _In_ unsigned int  wCodePageID
-);
+//extern "C" int __stdcall SetConsoleOutputCP(
+//    _In_ unsigned int  wCodePageID
+//);
+
+BOOL WINAPI CTRLCHandlerRoutine( _In_ DWORD dwCtrlType )
+{
+    printf("TODO: Catch CTRL+C under windows\n");
+    return TRUE; // We catch event. No more habdlers will be called
+}
 
 extern "C" int main(int argc, char* argv[])
 {
     int result;
     // Установка кодировки консоли в UTF-8
     SetConsoleOutputCP(65001);
+    SetConsoleCtrlHandler(CTRLCHandlerRoutine, TRUE);
 
     int test_full_http(const char* name_of_raw_file);
     result = test_full_http("raw/rcv_sock-1.raw");

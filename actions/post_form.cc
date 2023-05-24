@@ -1,4 +1,11 @@
-﻿#include <unistd.h>
+﻿#define _CRT_SECURE_NO_WARNINGS 1
+
+#ifndef _WIN32
+#include <unistd.h>
+#else
+typedef int ssize_t;
+#pragma execution_character_set( "utf-8" )
+#endif
 #include <fstream>
 
 #include "../action.h"
@@ -6,7 +13,7 @@
 
 using namespace xameleon;
 
-http_response_t * post_form_action::process_req(https_session_t * session)
+void post_form_action::process_req(https_session_t * session)
 {
     url_t               *   url = &session->request.url;
     http_request_t      *   request = &session->request;
@@ -68,7 +75,7 @@ http_response_t * post_form_action::process_req(https_session_t * session)
                 ssize_t count;
                 while(true)
                 {
-                    count = fread(data, 1, sizeof(data), section->fp);
+                    count = (ssize_t) fread(data, 1, sizeof(data), section->fp);
                     if (count < 0) {
                         fprintf(stderr, "Unable read temporary file\n");
                         break;
@@ -93,8 +100,9 @@ http_response_t * post_form_action::process_req(https_session_t * session)
 
     response->_content_type = "text/html; charset=utf-8";
     response->_body = new char[1024];
-    response->_body_size = snprintf(response->_body, 1024,
-        "<html><body>"
+    response->_body_size = snprintf((char*) response->_body, 1024,
+        "<!DOCTYPE html>"
+        "<html><head><title>Загрузка завершена</title></head><body>"
         "Всё будет, но <b>не</b> скоро.<br/>"
         "%s"
         "<a href='/'>Вернуться на главную страницу</a>"
@@ -102,5 +110,6 @@ http_response_t * post_form_action::process_req(https_session_t * session)
         holder.c_str()
         );
     response->_header_size = response->prepare_header(response->_header, 201, response->_body_size);
-    return response;
+    session->send_prepared_response();
+    delete response->_body;
 }

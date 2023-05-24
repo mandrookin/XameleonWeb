@@ -3,6 +3,17 @@
 
 namespace xameleon 
 {
+    constexpr unsigned int hash(const char* s, int off = 0) {
+        return !s[off] ? 5381 : (hash(s, off + 1) * 33) ^ s[off];
+    }
+
+    typedef enum {
+        EMPTY = 0,
+        HTTP = hash("http"),
+        HTTPS = hash("https"),
+        FTP = hash("ftp")
+    } utl_scheme_t;
+
     typedef enum {
         ERR = -1,
         POST = 0,
@@ -37,19 +48,21 @@ namespace xameleon
     typedef struct url_s {
         http_method_t       method;
         http_hr_version_t   version;
+        utl_scheme_t        scheme;
+        int                 port;
         int                 path_len;
-        char* rest;
-        int                 query_count;
-        key_val_t           query[32];
+        char*               domainname;
+        char*               pagename;
+        int                 parameters_count;
+        key_val_t           parameters[32];
+        char*               anchor;
         char                path[max_path_len];
         const char*         get_method();
         const char*         get_http_version();
+        bool                parse(const char* url);
+        url_s():pagename(nullptr) {}
     } url_t;
 
-    constexpr unsigned int hash(const char* s, int off = 0) {
-        return !s[off] ? 5381 : (hash(s, off + 1) * 33) ^ s[off];
-    }
-
-    char* get_http_path(char* ptr, url_t* uri);
+    const char* get_http_path(const char* ptr, url_t* uri);
 }
 #endif

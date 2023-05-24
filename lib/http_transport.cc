@@ -17,15 +17,17 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <list>
 
 namespace xameleon
 {
 
     typedef class http_transport : public transport_i
     {
-        int socket;
+        SOCKET socket;
         struct sockaddr_in addr;
         bool session_found;
+        char name[50];
 
     protected:
         const sockaddr* const address();
@@ -35,25 +37,26 @@ namespace xameleon
         int handshake();
         int recv(char* data, int size);
         int recv(char* data, int size, long long timeout);
-        int send(char* data, int len);
+        int send(const char* snd_buff, int len);
         int close();
         int is_secured() { return 0; }
         int connect(const char* hostname, int port);
         ~http_transport();
     public:
-        http_transport();
+        http_transport(const char* name);
     } https_transport_t;
 
-    http_transport::http_transport()
+    http_transport::http_transport(const char* name)
     {
+        strncpy(this->name, name, sizeof(this->name));
         socket = -1;
         session_found = false;
-        printf("\033[36mHTTP transport constructor\033[0m\n");
+        printf("\033[36mHTTP transport constructor\033[0m: %s\n", name);
     }
 
     http_transport::~http_transport()
     {
-        printf("\033[36mHTTP transport destructor\033[0m\n");
+        printf("\033[36mHTTP transport destructor\033[0m: %s\n", name);
     }
 
     const sockaddr* const http_transport::address()
@@ -84,8 +87,18 @@ namespace xameleon
 #else
     int http_transport::describe(char* socket_name, int buffs)
     {
-        strncpy(socket_name, "not imlemented\n", buffs);
-        return 0;
+        int status;
+        sockaddr_in     sa;
+        int sa_len = sizeof(sa);
+
+        status = getpeername(socket, (sockaddr*)&sa, &sa_len);
+        snprintf(socket_name, buffs, "%u.%u.%u.%u:%u",
+            sa.sin_addr.S_un.S_un_b.s_b1,
+            sa.sin_addr.S_un.S_un_b.s_b2,
+            sa.sin_addr.S_un.S_un_b.s_b3,
+            sa.sin_addr.S_un.S_un_b.s_b4,
+            sa.sin_port);
+        return status;
     }
 #endif
 
@@ -97,7 +110,7 @@ namespace xameleon
         addr.sin_port = htons(port);
         addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-        socket = ::socket(AF_INET, SOCK_STREAM, 0);
+        socket = (int) ::socket(AF_INET, SOCK_STREAM, 0);
         if (socket < 0) {
             perror("Unable create server_socket");
             exit(EXIT_FAILURE);
@@ -127,10 +140,14 @@ namespace xameleon
 
     int http_transport::close()
     {
+        if (socket < 0)
+            return (int) socket;
 #ifndef _WIN32
         return ::close(socket);
 #else
-        return ::closesocket(socket);
+            int rval = ::closesocket(socket);
+            socket = -1;
+            return rval;
 #endif
     }
 
@@ -143,13 +160,24 @@ namespace xameleon
     transport_i* http_transport::accept()
     {
         socklen_t len = sizeof(addr);
-        http_transport* peer = new http_transport();
-        peer->socket = ::accept(socket, (struct sockaddr*)&peer->addr, &len);
-        if (peer->socket < 0) {
+        http_transport* peer = nullptr;
+        struct sockaddr_in addr;
+        SOCKET sock = ::accept(socket, (struct sockaddr*)&addr, &len);
+        if (sock < 0) {
             perror("http_transport::accept(): Unable accept incoming connection on TCP level");
-            delete peer;
-            peer = nullptr;
+            return nullptr;
         }
+
+        char name[80];
+        snprintf(name, sizeof(name), "%u.%u.%u.%u:%u",
+            addr.sin_addr.S_un.S_un_b.s_b1,
+            addr.sin_addr.S_un.S_un_b.s_b2,
+            addr.sin_addr.S_un.S_un_b.s_b3,
+            addr.sin_addr.S_un.S_un_b.s_b4,
+            addr.sin_port);
+        peer = new http_transport(name);
+        memcpy(&peer->addr, &addr, sizeof(struct sockaddr_in));
+        peer->socket = sock;
         return peer;
     }
 
@@ -158,7 +186,7 @@ namespace xameleon
         return ::recv(socket, data, size, 0);
     }
 
-    int http_transport::send(char* snd_buff, int len)
+    int http_transport::send(const char* snd_buff, int len)
     {
         int status, bytes = 0;
         while (bytes < len)
@@ -176,14 +204,17 @@ namespace xameleon
         fd_set set;
         struct timeval timeout;
 
+        if (socket < 0)
+            return -1;
+
         FD_ZERO(&set);
         FD_SET(socket, &set);
 
-        timeout.tv_sec = time / 1000000;;
+        timeout.tv_sec = (long)(time / 1000000);
         timeout.tv_usec = time % 1000000;;
 
         /* select returns 0 if timeout, 1 if input available, -1 if error. */
-        int ev = select(socket + 1, &set, NULL, NULL, &timeout);
+        int ev = select((int)socket + 1, &set, NULL, NULL, &timeout);
         if (ev == 0) {
             printf("Socket timeout. Start closing procedure\n");
             return 0;
@@ -221,19 +252,34 @@ namespace xameleon
 
             status = ::connect(socket, (struct sockaddr*)&addr, addr_len);
             if (status < 0) {
+                int error_no = WSAGetLastError();
                 close();
                 socket = -1;
-                fprintf(stderr, "\nConnection Failed \n");
+                fprintf(stderr, "\nConnection Failed: %d\n", error_no);
                 break;
             }
         } while (false);
         return status;
     }
 
-    transport_t* create_http_transport()
+    static std::list<transport_i*>        free_transports;
+
+    transport_i* get_http_transport(const char* name)
     {
-        return new http_transport();
+        transport_i* result = nullptr;
+        if (free_transports.size() > 0) {
+            result = free_transports.front();
+            free_transports.pop_front();
+        }
+        else {
+            result = new http_transport(name);
+        }
+        return result;
     }
 
+    void release_http_transport(transport_i* tp)
+    {
+        free_transports.push_back(tp);
+    }
 }
 

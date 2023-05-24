@@ -45,39 +45,117 @@ int proxy_action::load_form(https_session_t* session)
 
 #pragma execution_character_set( "utf-8" )
 
-http_response_t* proxy_action::process_req(https_session_t* session)
+static const char  szProxyScreen[] =
+"<!DOCTYPE html>"
+"<html>"
+"<head>"
+    "<meta charset=\"utf-8\">"
+    "<title>Прокси режим</title>"
+"</head>\r\n"
+"<body>"
+    "<form id = \"seturl\" enctype=\"multipart/form-data\" method=\"post\" action=\"#\">"
+    "Введите URL для перехода<br>"
+        "<input type = \"text\" name=\"url\" style=\"border: 2px solid gray; border-radius: 2px\" width=\"120px\" value=\"\" />"
+        "<input type = \"submit\" class=\"button\" value=\" Go \"/>"
+    "</form>"
+    "<br/><br/><a href=\"/\">Вернуться назад </a><br/>"
+"</body>"
+"</html>\r\n";
+
+
+void proxy_action::proxy_loop(https_session_t* session)
+{
+    const char* src = nullptr;
+    http_request_t* request = &session->request;
+    http_response_t* response = &session->response_holder;
+    multipart_stream_reader_t   reader(proxy_transport);
+
+    char rewite_header_buffer[2048];
+    int hdr_size = sizeof(rewite_header_buffer);
+
+    do {
+        if (request->proxy_rewrite_header(rewite_header_buffer, &hdr_size) == true)
+        {
+            proxy_transport->send(rewite_header_buffer, hdr_size);
+            printf("\033[36mProxy request sent:\033[0m\n%s", rewite_header_buffer);
+
+            http_response_t* proxy_response = new http_response_t;
+            const char* parse_proxy_response = proxy_response->parse_header(&reader);
+
+            if (parse_proxy_response) 
+            {
+                if (parse_proxy_response == reader.error_socket) {
+                    printf("proxy_loop() error reading from socket\n");
+                    break;
+                }
+                response->_content_type = proxy_response->_content_type;
+                response->_content_lenght = proxy_response->_content_lenght;
+                if (*parse_proxy_response != '\n')
+                    printf("Remoted end: %s\n", parse_proxy_response);
+                else {
+                    int rest = proxy_response->_content_lenght;
+                    char buffer[4096];
+
+                    response->_header_size = response->prepare_header(buffer, proxy_response->_code, rest);
+                    session->get_transport()->send(buffer, response->_header_size);
+
+                    bool sync;
+                    char* dst;
+                    do {
+                        dst = buffer;
+                        do {
+                            src = reader.get_pchar(sync, rest);
+                            if (sync)
+                                break;
+                            *dst++ = *src;
+                            rest--;
+                        } while (dst - buffer < sizeof(buffer) - 1
+#if LOG_PROXY_RESPOBSE
+                            && *src != '\n'
+#endif
+                            );
+                        *dst = 0;
+#if ! LOG_PROXY_RESPOBSE
+                        session->get_multiart_reader()->get_transport()->send(buffer, (int)(dst - buffer));
+#else
+                        printf("%s", buffer);
+#endif
+                        if (sync) {
+                            if (src == reader.zero_socket) {
+                                break;
+                            }
+                        }
+                    } while ((!proxy_response->_content_lenght || rest > 0) && src != reader.zero_socket);
+                }
+            }
+            else {
+                printf("Proxy response not parsed for:   %s:%d\n", request->host->hostname.c_str(), request->host->port);
+                break;
+            }
+        }
+        src = request->parse_request(&reader);
+
+    } while (src != reader.error_socket);
+}
+
+void proxy_action::process_req(https_session_t* session)
 {
     url_t* url = &session->request.url;
     http_request_t* request = &session->request;
     http_response_t* response = &session->response_holder;
-    url->rest = url->path + 1;
-    printf("ACTION: proxy [%s <- %s]\n", url->path, url->rest);
+///    url->rest = url->path + 1;
+    printf(" - - - - - - - - - - ACTION: proxy [%s <- %s]\n", url->path, url->path);
 
-    if (destination.empty())
-    {
         if (url->method == GET)
         {
+            char buffer[4096];
             response->_code = 200;
             response->_content_type = "text/html; charset=utf-8";
-            response->_body = new char[4096];
-            response->_body_size = snprintf(response->_body, 4096,
-                "<!DOCTYPE html>"
-                "<html>"
-                "<head>"
-                "<meta charset=\"utf-8\">"
-                "<title>Прокси режим</title>"
-                "</head>\r\n"
-                "<body>"
-                "<form id = \"seturl\" enctype=\"multipart/form-data\" method=\"post\" action=\"#\">"
-                "Введите URL для перехода<br>"
-                "<input type = \"text\" name=\"url\" style=\"border: 2px solid gray; border-radius: 2px\" width=\"120px\" value=\"\" />"
-                "<input type = \"submit\" class=\"button\" value=\" Go \" />"
-                "</form>"
-                "</body>"
-                "</html>\r\n"
-            );
+            response->_body = buffer; 
+            response->_body_size = snprintf(buffer, sizeof(buffer),szProxyScreen);;
             response->_header_size = response->prepare_header(response->_header, 200, response->_body_size);
-            return response;
+            session->send_prepared_response();
+            return;
         }
         else if (url->method == POST)
         {
@@ -108,97 +186,50 @@ http_response_t* proxy_action::process_req(https_session_t* session)
                 destination = section->value;
         }
 
-
         if (destination.empty()) {
-            response->_content_type = "text/html; charset=utf-8";
-            return session->page_not_found(url->method, url->path, session->request._referer.c_str());
+            session->page_not_found(url->method, url->path, session->request._referer.c_str());
+            return;
         }
 
+#if true
+        request->url.parse(destination.c_str());
+#else
         // Тут ещё предстоить парсить строку для перехода
         url_t go_url;
-        xameleon::get_http_path((char*)destination.c_str(), &go_url);
+        int pos = destination.find("http://");
+        std::string  rq;
+        if (pos == 0) {
+            rq = destination.substr(7);
+        }
+        else {
+            rq = destination;
+
+        }
+
+        xameleon::get_http_path((char*)rq.c_str(), &go_url);
 
         if (proxy_transport)
             throw "Proxy transport already defined";
+#endif
 
         url->method = GET;
-        request->_host = destination;
-        request->port = 80;
-
-
-        char rewite_header_buffer[2048];
-        int hdr_size = sizeof(rewite_header_buffer);
-        if (request->proxy_rewrite_header(rewite_header_buffer, &hdr_size) == true)
+        if (url->domainname != nullptr)
         {
-            proxy_transport = create_http_transport();
-            if (proxy_transport->connect(request->_host.c_str(), request->port) >= 0)
+            request->host->hostname = url->domainname;
+            request->host->port = url->port;
+
+            proxy_transport = get_http_transport("proxy-redirector");
+
+            if (proxy_transport->connect(request->host->hostname.c_str(), request->host->port) >= 0)
             {
-                proxy_transport->send(rewite_header_buffer, hdr_size);
-                printf("\033[36mProxy request sent:\033[0m\n%s", rewite_header_buffer);
-
-                multipart_stream_reader_t* reader = new multipart_stream_reader_t(proxy_transport);
-                http_response_t* proxy_response = new http_response_t;
-                const char* parse_proxy_response = proxy_response->parse_header(reader);
-
-                if (parse_proxy_response) {
-                    response->_content_type = proxy_response->_content_type;
-                    response->_content_lenght = proxy_response->_content_lenght;
-                    if (*parse_proxy_response != '\n')
-                        printf("Remoted end: %s\n", parse_proxy_response);
-                    else {
-                        int rest = proxy_response->_content_lenght;
-                        char buffer[4096];
-
-                        response->_header_size = response->prepare_header(buffer, proxy_response->_code, rest);
-                        session->get_transport()->send(buffer, response->_header_size);
-
-                        bool sync;
-                        const char* src;
-                        char* dst;
-                        do {
-                            dst = buffer;
-                            do {
-                                src = reader->get_pchar(sync, rest);
-                                if (sync)
-                                    break;
-                                *dst++ = *src;
-                                rest--;
-                            } while (dst - buffer < sizeof(buffer) - 1
-#if LOG_PROXY_RESPOBSE
-                                && *src != '\n'
-#endif
-                              );
-                            *dst = 0;
-#if ! LOG_PROXY_RESPOBSE
-                            session->get_multiart_reader()->get_transport()->send(buffer, (int) (dst-buffer));
-#else
-                            printf("%s", buffer);
-#endif
-                            if (sync) {
-                                if (src == reader->zero_socket) {
-                                    break;
-                                }
-                            }
-                        } while ((!proxy_response->_content_lenght || rest > 0) && src != reader->zero_socket);
-                    }
-                }
-                else
-                    printf("Proxy response not parsed for:   %s:%d\n", request->_host.c_str(), request->port);
-                proxy_transport->close();
-                delete proxy_response;
+                this->proxy_loop(session);
             }
-            delete proxy_transport;
+
+            proxy_transport->close();
+            release_http_transport(proxy_transport);
             proxy_transport = nullptr;
         }
-destination.clear();
-        response->_header_size = 0;
-        return response;
-            // session->page_not_found(url->method, url->path, session->request._referer.c_str());
-    }
-
-    throw "WE DID IT!";
-
-
-    return response;
+        else
+            fprintf(stderr, "No url for proxy connection\n");
 }
 

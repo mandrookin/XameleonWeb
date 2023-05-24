@@ -105,8 +105,10 @@ namespace xameleon {
         return 0;
     }
 
-    http_action_t* find_http_action(url_t& url)
+    http_action_t* find_http_action(http_request_t &request)
     {
+        url_t& url = request.url;
+
         http_action_t* route = nullptr;
 
         endpoint_t* node = &root;
@@ -117,14 +119,14 @@ namespace xameleon {
         int prev_pos = 0;
         int i;
 
-        url.rest = nullptr;
+        url.anchor = nullptr;
 
-        for (i = 1; url.path[i]; i++) {
-            if (url.path[i] != '/') {
-                segment += url.path[i];
+        for (i = 1; url.pagename[i]; i++) {
+            if (url.pagename[i] != '/') {
+                segment += url.pagename[i];
                 continue;
             }
-            if (url.path[i + 1] == '\0') {
+            if (url.pagename[i + 1] == '\0') {
                 chunks.push_back(segment);
                 segment = '/';
                 i++;
@@ -138,7 +140,7 @@ namespace xameleon {
         }
         chunks.push_back(segment);
         segment.clear();
-        url.rest = url.path + i;
+        url.anchor = url.pagename + i;
 
         int sz = (int) chunks.size();
         for (i = 0; i < sz; i++) {
@@ -148,11 +150,11 @@ namespace xameleon {
                 if (node == nullptr)
                 {
                     // Полюбому ошибка
-                    url.rest = url.path + 1;
+                    url.anchor = url.pagename + 1;
                     return nullptr;
                 }
                 //            url.path[prev_pos] = '\0';
-                url.rest = url.path + prev_pos + 1;
+                url.anchor = url.pagename + prev_pos + 1;
                 break;
             }
             else {

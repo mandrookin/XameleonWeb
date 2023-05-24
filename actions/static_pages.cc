@@ -25,29 +25,27 @@
 
 using namespace xameleon;
 
-http_response_t* static_page_action::process_req(https_session_t* session)
+void static_page_action::process_req(https_session_t* session)
 {
     http_response_t* response = &session->response_holder;
     url_t* url = &session->request.url;
 
     if (url->path[0] == '/' && url->path[1] == 0) {
         strcpy(url->path, "/index.html");
-        url->rest = url->path + 1;
+        url->anchor = url->path + 1;
     }
 
-    printf("ACTION 'static page': %s%s <- %s\n", session->get_html_root(), url->path, url->rest);
+    printf("ACTION 'static page': %s%s\n", session->get_html_root(), url->pagename);
 
     response_send_file(session);
-
-    return nullptr;
 }
 
 static char * favicon_buff = nullptr;
 static int favicon_size = 0;
 
-http_response_t* get_favicon_action::process_req(https_session_t* session)
+void get_favicon_action::process_req(https_session_t* session)
 {
-    transport_t* transport = session->get_multiart_reader()->get_transport();
+    transport_i* transport = session->get_multiart_reader()->get_transport();
     http_request_t*  request  = &session->request;    
     http_response_t* response = &session->response_holder;
 
@@ -59,55 +57,50 @@ http_response_t* get_favicon_action::process_req(https_session_t* session)
             favicon_size = -1;
     }
 
+//    favicon_buff = (char*) "abc";
+//    favicon_size = 3;
+
     if (favicon_buff) {
-        response->etag = "favicon.ico";
+        response->_etag = "favicon.ico";
         response->_max_age = 300000;
         response->_content_type = "image/x-icon";
         response->_body_size = favicon_size;
         response->_body = favicon_buff;
+        response->_code = 200;
+
         response->_header_size = response->prepare_header(response->_header, response->_code, response->_body_size);
         int szh = transport->send(response->_header, response->_header_size);
-        int szb = transport->send(response->_body, response->_body_size);
+        int szb = transport->send((char*) response->_body, response->_body_size);
         if (szh != response->_header_size || szb != response->_body_size)
-            printf("Unable send fvicon.ico");
-        return nullptr;
+            printf("Unable send favicon.ico");
     }
     else {
-        response->_content_type = "text/html; charset=utf-8";
         session->page_not_found(GET, request->url.path, request->_referer.c_str());
         session->counters.not_found++;
-        response->_header_size = response->prepare_header(response->_header, response->_code, response->_body_size);
     }
-    return response;
 }
 
 
-http_response_t* get_touch_action::process_req(https_session_t* session)
+void get_touch_action::process_req(https_session_t* session)
 {
     http_response_t* response = &session->response_holder;
-    url_t* url = &session->request.url;
+    url_t& url = session->request.url;
     bool found = false;
 
-    response->_code = 200;
-
-    printf("Getting secrets for %s:\n", url->rest);
-    std::string id = url->rest;
-    for (int i = 0; i < url->query_count; i++) {
-        printf("  '%s': %s\n", url->query[i].key, url->query[i].val);
-        if (strcmp(url->query[i].key, "url") == 0) {
-            strcpy(url->path, url->query[i].val);
+    printf("%s secrets for %s:\n", http_method(url.method), url.anchor);
+    std::string id = url.anchor;
+    for (int i = 0; i < url.parameters_count; i++) {
+        printf("  '%s': %s\n", url.parameters[i].key, url.parameters[i].val);
+        if (strcmp(url.parameters[i].key, "url") == 0) {
+            strcpy(url.path, url.parameters[i].val);
             // Здесь пока поломано.
             response->add_cookie("lid", id.c_str(), 31536000);
             response->_header_size = response->redirect_to(308, session->request._referer.c_str(), true);
+            session->get_transport()->send(response->_header, response->_header_size);
             found = true;
+            break;
         }
     }
-    if (!found) {
-        strcpy(url->path, "/notexistpage.html");
-        url->rest = url->path + 1;
-        response_send_file(session);
-        return nullptr;
-    }
-
-    return response;
+    if (!found)
+        session->page_not_found(http_method_t::GET,"--secret--","--seccret--");
 }

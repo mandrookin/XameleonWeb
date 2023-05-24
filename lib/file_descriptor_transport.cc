@@ -18,14 +18,14 @@ namespace xameleon
             return 0;
         }
         int recv(char* data, int size) {
-            return fread(data, 1, size, file_descritor);
+            return (int)fread(data, 1, size, file_descritor);
             throw "recv";
         }
         int recv(char* data, int size, long long timeout)
         {
             return recv(data, size);
         }
-        int send(char* data, int len)
+        int send(const char* data, int len)
         {
             fprintf(devnull, data);
             return len;
@@ -55,7 +55,7 @@ namespace xameleon
         }
     };
 
-transport_t* create_fiel_name_transport(char * filename)
+transport_i* create_fiel_name_transport(char * filename)
 {
     FILE* fp = fopen(filename, "rb");
     if (fp == NULL)
@@ -67,13 +67,13 @@ transport_t* create_fiel_name_transport(char * filename)
     int size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    transport_t* transport = new FileTransport(fp);
+    transport_i* transport = new FileTransport(fp);
     return transport;
 }
 
 }
 
-xameleon::transport_t* create_file_descriptor_transport(FILE* fp)
+xameleon::transport_i* create_file_descriptor_transport(FILE* fp)
 {
     return new xameleon::FileTransport(fp);
 }

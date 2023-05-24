@@ -1,4 +1,6 @@
+#ifndef _WIN32
 #include <db.h>
+#endif
 
 #include "../counters.h"
 
@@ -13,6 +15,8 @@ namespace xameleon {
     } ipv4_record_t;
 
     typedef int (*ip_list_callback_t)(void * obj, ipv4_record_t *);
+
+#ifndef _WIN32
 
     class ipv4_log
     {
@@ -29,9 +33,10 @@ namespace xameleon {
         DB* create_ip_database();
         int release_ip_database();
         static int sprint_ip(char* str, uint32_t ip);
-
     };
 
     ipv4_log* get_ip_database();
+#endif
+
 }
 

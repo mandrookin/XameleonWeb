@@ -1,0 +1,41 @@
+{
+    "http_timeout": 300, 
+    "https_timeout": 300, 
+    "hosts": [
+        {
+            "proxy": "http://127.0.0.1", 
+            "name": "localhost", 
+            "mode": "proxy"
+        }, 
+        {
+            "proxy": "http://www.ru", 
+            "name": "new_localhost", 
+            "mode": "proxy"
+        }, 
+        {
+            "proxy": "http://eu.httpbin.org", 
+            "name": "old_localhost", 
+            "mode": "proxy"
+        }, 
+        {
+            "home": "marketing", 
+            "name": "test.l4os.ru", 
+            "mode": "site"
+        }, 
+        {
+            "home": "pages", 
+            "name": "web.l4os.ru", 
+            "mode": "default"
+        }, 
+        {
+            "home": "proxy", 
+            "name": "proxy.l4os.ru", 
+            "mode": "proxy"
+        },
+        {
+            "home": "pages", 
+            "name": "127.0.0.1", 
+            "mode": "default"
+        } 
+    ]
+}
