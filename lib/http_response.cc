@@ -48,7 +48,7 @@ namespace xameleon
                 }
             } while (*src != '\n');
 
-            int linelen = ptr - headline;
+            int linelen = (int) (ptr - headline);
 
             if (sync) {
                 if (src == reader->zero_socket) {

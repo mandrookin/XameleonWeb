@@ -102,7 +102,7 @@ void cgi_action::process_req(https_session_t* session)
         &pi)           // Pointer to PROCESS_INFORMATION structure
         )
     {
-        printf("CreateProcess failed (%d).\n", GetLastError());
+        printf("CreateProcess failed (%u).\n", GetLastError());
         return;
     }
     else 

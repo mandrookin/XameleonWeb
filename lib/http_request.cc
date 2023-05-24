@@ -373,7 +373,7 @@ namespace xameleon
         while (true)
         {
             if (*ptr == ',' || *ptr == '\0') {
-                int len = ptr - enc;
+                int len = (int) (ptr - enc);
                 if (len == 4 && enc[0] == 'g' && enc[1] == 'z' && enc[2] == 'i' && enc[3] == 'p') {
                     encoding = (encoding_t)(encoding | gzip);
                     enc = ++ptr;
@@ -492,7 +492,7 @@ namespace xameleon
             } while (ch != '\n');
 
             *dst_ptr = 0;
-            int linelen = dst_ptr - header;
+            int linelen = (int) (dst_ptr - header);
 
             if (sync) {
                 if (src_ptr == reader->bound) {
@@ -507,14 +507,14 @@ namespace xameleon
             if (linelen == 0)
                 return src_ptr;
 
-            char* pcolon;
+//            char* pcolon;
             switch (hash(line))
             {
             case hash("host"):
                 host = find_host(val);
                 if (host == nullptr) {
                     this->_cache_control = val;
-                    printf("Host is not mine: %s\n", val);
+                    printf("Host is not mine: %s\n", val != nullptr ? val : "nullptr");
                     return nullptr;
                 }
 #if false
@@ -567,7 +567,7 @@ namespace xameleon
 //            case hash("if-none-match"):
 //                break;
             case hash("upgrade-insecure-requests"):
-                upgrade_insecure_requests = std::atoi(val);
+                upgrade_insecure_requests = std::atoi(val ? val : "0");
                 break;
             case hash("range"):
                 parse_range(val);// delim);
@@ -624,7 +624,7 @@ namespace xameleon
         int freesize = *size;
         int wr_sz;
         const char* destination_host = host->home.c_str();
-        int pos = host->home.find("://");
+        size_t pos = host->home.find("://");
         destination_host = pos == std::string::npos ? destination_host : destination_host + pos + 3;
         wr_sz = snprintf(header_buffer, freesize,
             "%s %s %s\r\n"
@@ -680,13 +680,13 @@ namespace xameleon
                 }
 
             }
-            int linelen = ptr - headline;
+            int linelen = (int) (ptr - headline);
             //           rcv_sz = linelen;
 
             const char* header_body = parse_http_request(headline, &url);
 
             if (header_body == nullptr) {
-                fprintf(stderr, "Got broken HTTP request: %s size: %u\n%s\n", url.path, linelen, headline);
+                fprintf(stderr, "Got broken HTTP request: %s size: %d\n%s\n", url.path, linelen, headline);
                 src = nullptr;
                 break;
             }

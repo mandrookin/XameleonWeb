@@ -35,7 +35,7 @@ namespace xameleon {
                         break;
                     *dst++ = *src;
                     //                                    rest--;
-                    collected_bytes = dst - buffer;
+                    collected_bytes = (int) (dst - buffer);
                     total_bytes++;
                 } while (collected_bytes < sizeof(buffer) - 1 && total_bytes < proxy_response._content_lenght
 #if LOG_PROXY_RESPOBSE

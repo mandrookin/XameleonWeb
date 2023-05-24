@@ -54,7 +54,7 @@ namespace xameleon
 
 			// Пока берём последний адрес.
 			for (struct addrinfo* rp = result_list; rp != NULL; rp = rp->ai_next) {
-				*addr_len = rp->ai_addrlen;
+				*addr_len = (int) rp->ai_addrlen;
 				memcpy(paddress, rp->ai_addr, rp->ai_addrlen);
 				result = true;
 			}
